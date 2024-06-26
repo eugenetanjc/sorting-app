@@ -114,8 +114,9 @@ def sorting(s_username, s_password, s_country, year, s_week, s_ctype, user, para
         'host':'hgpost-sg-ees1zqm01001-ap-southeast-1.hologres.aliyuncs.com',
         'port': 80, 
         'dbname':'data_center',
-        'user':'LTAI5tAtdVPLjfs9y2GDP8UY',
-        'password':'CU7N6JYSHYSdaNO8p5NyMdeDUQz1CD'}
+        'user':os.getenv('HOLOGRES_USER'),
+        'password':os.getenv('HOLOGRES_PASS'),
+    }
 
     conn = psycopg2.connect(**params)
     query = "select article, item_class_name_desc, item_sub_class_desc, item_category_desc, sku_theme, launch_desc, item_group_desc, sku_size from dim.item_master where brand='CK' AND sales_org='3000' AND (label_id='CKSL' OR label_id='CKCK')"
