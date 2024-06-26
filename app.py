@@ -477,8 +477,3 @@ def compile_file(n_clicks, filename, country, ctype):
                         style={'color': 'green', 'font-family': 'Bahnschrift'})
     
     return ''
-
-# Run app with python app.py
-if __name__ == "__main__":
-    logger.format_logs('ECOM Sorting', True)
-    app.run_server(host= '0.0.0.0', port = 5000, debug=True)
