@@ -18,11 +18,9 @@ warnings.filterwarnings("ignore")
 from PIL import Image as PILImage
 from dash import dcc
 
-def sorting(s_username, s_password, s_country, year, s_week, s_ctype, user, params_dict):
+def sorting(s_country, year, s_week, s_ctype, user, params_dict):
 
     # Processing user input
-    # username = "".join([str(x) for x in s_username])
-    # password = "".join([str(x) for x in s_password])
     country = "".join([str(current_country) for current_country in s_country])
     week = int("".join([str(current_integer) for current_integer in s_week]))
     countrytype = "".join([str(current_ctype) for current_ctype in s_ctype])
@@ -108,7 +106,7 @@ def sorting(s_username, s_password, s_country, year, s_week, s_ctype, user, para
     soh_agg_df = soh_df.groupby(['Article'], as_index=False).agg({'SOH': 'sum', 'Colour':'count'})
     soh_agg_df['Key Size Check'] = (soh_agg_df['Article'].isin(KeySizeCheck_color_agg[KeySizeCheck_color_agg['Key Size Check'] == True]['Article']))
     processing_df = soh_agg_df.copy()
-    return '123', '456'
+  
     # Reading from Item Master, to determine additional features, to be used to lookup the seasonal focus for that product
     params = {
         'host':'hgpost-sg-ees1zqm01001-ap-southeast-1.hologres.aliyuncs.com',
@@ -145,43 +143,6 @@ def sorting(s_username, s_password, s_country, year, s_week, s_ctype, user, para
 
     # Appending marketing list onto the Rough Working List
     processing_df['Marketing'] = processing_df['Article'].isin(marketing_items['Article'])
-
-    # # Reading Family Mapping 
-    # url_shrpt = 'https://charleskeith.sharepoint.com/sites/CKEInventory'
-    # username_shrpt = 'it.dataanalysts@charleskeith.com'
-    # password_shrpt = 'ITd@t@analyst24!'
-
-    # # For authenticating into your sharepoint site
-    # ctx_auth = AuthenticationContext(url_shrpt)
-    # if ctx_auth.acquire_token_for_user(username_shrpt, password_shrpt):
-    #     ctx = ClientContext(url_shrpt, ctx_auth)
-    #     web = ctx.web
-    #     ctx.load(web)
-    #     ctx.execute_query()
-
-    # # For downloading the latest Family Mapping file
-    # file_url_shrpt = '/sites/CKEInventory/Shared%20Documents/Merchandising/Pinning%20Guideline/Family_Grouping%27%2722.xlsx' # ' replaced with %27%27
-    # response = File.open_binary(ctx, file_url_shrpt)
-    # fm_filename = f"Latest FamilyMap {year} W{week} {user}.xlsx"
-    # fm_file_path = os.path.join(root_folder_path, country, fm_filename)
-
-    # # Save the Family Mapping file to country folder
-    # with open(fm_file_path, 'wb') as output_file:  
-    #     output_file.write(response.content)
-    #     print('Mapping has been updated for the latest year/week.')
-    
-    # def read_family_mapping_sheet(sheet_name):
-    #     return pd.read_excel(fm_file_path, sheet_name=sheet_name, skiprows=1, 
-    #                          header=None, usecols="A,D", engine='openpyxl',
-    #                          names=["Article", "Family Mapping"])
-
-    # # Reading Family Mapping file for each product category
-    # FamilyGrouping_ref = pd.concat([read_family_mapping_sheet("Shoes"), 
-    #                                 read_family_mapping_sheet("Bags")], 
-    #                                 ignore_index=True)
-
-    # # Appending family grouping onto the Rough Working List
-    # processing_df = processing_df.merge(FamilyGrouping_ref, on = "Article", how='left')
 
     # Reading discount info from datatable
     conn = psycopg2.connect(**params)
@@ -254,9 +215,8 @@ def sorting(s_username, s_password, s_country, year, s_week, s_ctype, user, para
     processing_df = processing_df.merge(discount_df, on = "Article", how='left')
 
     # Reading New Arrivals info from worksheet
-    new_arrivals = pd.read_excel(params_file_path, sheet_name = "New Arrivals", 
-                                 skiprows=1, header = None, usecols="A:B", 
-                                 names = ["Week","Article"], engine='openpyxl')
+    new_arrivals = params_dict["New Arrivals"].iloc[1:, 0:2]
+    new_arrivals.columns = ['Week', 'Article']
     new_arrivals = new_arrivals[new_arrivals['Week'] >= week-2]     # takes last 3 weeks of new arrivals
     processing_df['New Arrival'] = processing_df['Article'].isin(new_arrivals['Article'])
 
@@ -277,9 +237,8 @@ def sorting(s_username, s_password, s_country, year, s_week, s_ctype, user, para
     processing_df = processing_df.drop_duplicates(subset=['Article'])
 
     # Reading Repeats info from worksheet
-    repeats = pd.read_excel(params_file_path, sheet_name = "Repeats", 
-                            skiprows=1, header = None, usecols="A:B", 
-                            names = ["Week","Article"], engine='openpyxl')
+    repeats = params_dict["Repeats"].iloc[1:, 0:2]
+    repeats.columns = ['Week', 'Article']
     repeats = repeats[repeats['Week'] >= week-2]
     processing_df['Repeat'] = processing_df['Article'].isin(repeats['Article'])
 
@@ -289,16 +248,15 @@ def sorting(s_username, s_password, s_country, year, s_week, s_ctype, user, para
 
     # Reading Product ID, Category ID, and Stage ID from worksheets
     ref_sheets = {
-    "PID_ref": {"sheet_name": "countryappend", "columns": "A:B", "names": ["Country", "PID"]},
-    "CID_ref": {"sheet_name": "countryappend", "columns": "D:E", "names": ["Country", "CID"]},
-    "SID_ref": {"sheet_name": "stageid", "columns": "A:B", "names": ["Class", "SID"]}
+    "PID_ref": {"sheet_name": "countryappend", "columns": slice(0,2), "names": ["Country", "PID"]},
+    "CID_ref": {"sheet_name": "countryappend", "columns": slice(3,5), "names": ["Country", "CID"]},
+    "SID_ref": {"sheet_name": "stageid", "columns": slice(0,2), "names": ["Class", "SID"]}
     }
 
     # The sheets are saved into a dictionary
     ref_dfs = {}
     for ref_name, ref_info in ref_sheets.items():
-        df = pd.read_excel(params_file_path, sheet_name=ref_info["sheet_name"], 
-                           skiprows=1, header=None, usecols=ref_info["columns"], names=ref_info["names"], engine='openpyxl')
+        df = params_dict["sheet_name"].iloc[1:, ref_info["columns"]]
         ref_dfs[ref_name] = df
 
     # Function for initial sorting of products by category
@@ -317,11 +275,6 @@ def sorting(s_username, s_password, s_country, year, s_week, s_ctype, user, para
         # Filtering for products by category
         selected_category = processing_df[processing_df['Article'].str.contains(article_prefix)]
 
-        # # Getting minimum weeks launched for each family map grouping 
-        # GroupMinWeeks_df = selected_category.groupby(['Family Mapping'],as_index=False).agg({'Weeks Launched': 'min'})
-        # GroupMinWeeks_df.rename(columns={'Weeks Launched':'Group Min Weeks'},inplace=True)
-        # products_sorting = selected_category.merge(GroupMinWeeks_df, on = "Family Mapping", how='left')
-
         # Summing SOH by Theme for sorting purposes later
         SOHbyTheme_df = selected_category.groupby(['Theme'],as_index=False).agg({'SOH': 'sum'})
         SOHbyTheme_df.rename(columns={'SOH':'SOH By Theme'},inplace=True)
@@ -330,9 +283,9 @@ def sorting(s_username, s_password, s_country, year, s_week, s_ctype, user, para
 
         # Add in products in Core Group (only for Bags and Shoes)
         if product_category == ('Bags' or 'Shoes'):
-            core_ref = pd.read_excel(params_file_path, sheet_name = f"{product_category}CORE", 
-                                     skiprows=1, header = None, usecols="A:B",
-                                     names = ["Article","Core Group"], engine='openpyxl') 
+            core_ref = params_dict[f"{product_category}CORE"].iloc[:, 0:2]
+            core_ref.columns = ["Article", "Core Group"]
+            
             products_sorting = products_sorting.merge(core_ref, on = "Article", how = "left")
 
         # Initial sorting using the columns added thus far
@@ -344,14 +297,12 @@ def sorting(s_username, s_password, s_country, year, s_week, s_ctype, user, para
         # Saving to Working Output file in respective country folder
         sorted_folder = "Working Output"
         sorted_filename = f"Sorting Art Check {product_category} {year} W{week} {user}.csv"
-        sorted_products_path = os.path.join(root_folder_path, country, sorted_folder, sorted_filename)
         sorted_products = sorted_products.reindex(columns=['Article', 'Marketing', 'New Arrival', 'Repeat', 
                                                             'Core Group', 'Group Min Weeks', 'Key Size Check',
                                                             'Colour','Weeks Launched', 'Stock Type', 'Seasonal Focus',
                                                             'SOH', 'Class', 'Sub Class', 'Theme', 'Season', 'Category',
                                                             'Category Name', 'Size', 'First Sales Date', 'SOH By Theme'])
         
-        sorted_products.to_csv(sorted_products_path, index=False)
         output = sorted_products.copy()
 
         # Sorting and putting core + family mapping together
@@ -374,7 +325,7 @@ def sorting(s_username, s_password, s_country, year, s_week, s_ctype, user, para
         output["Catalog ID"] = "storefront_ck-" + output["CID"]
         output['Values'] = 'bottom'
         
-        return output, sorted_products_path
+        return output
     
     # Function to group products by core group and family mapping
     def product_grouping(sorted_items):

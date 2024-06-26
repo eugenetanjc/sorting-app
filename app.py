@@ -97,7 +97,19 @@ def sorting_layout():
         st.write("Sorting is being executed...")
 
         outcome = peform_sorting(country, year, week, country_type, params_dict)
-        st.success(outcome)
+        st.success("Sorting completed successfully!")
+
+    # Function to create a downloadable link for CSV file
+    def get_csv_download_link(df, filename="sorted_data.csv"):
+        csv = df.to_csv(index=False)
+        b64 = base64.b64encode(csv.encode()).decode()  # Encode as base64
+        href = f'<a href="data:file/csv;base64,{b64}" download="{filename}">Download CSV file</a>'
+        return href
+
+    # Display download link if outcome exists and user clicks the button
+    if st.button("Download sorted data as CSV"):
+        st.write("Downloading sorted data...")
+        st.markdown(get_csv_download_link(outcome), unsafe_allow_html=True)
 
 # Define the Streamlit app layout for the Compilation tab
 def compile_layout():
