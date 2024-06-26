@@ -6,7 +6,6 @@ office365
 Office365-REST-Python-Client
 openpyxl
 pandas
-psycopg2
 psycopg2_binary
 XlsxWriter
 xlrd
