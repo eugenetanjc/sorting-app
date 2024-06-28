@@ -24,7 +24,7 @@ country_options = [{'label': country, 'value': country} for country in [
     ]]
 countrytype_options = [{'label': countrytype, 'value': countrytype} for countrytype  in ['Hot', 'Cold', 'ANZ']]
 
-def peform_sorting(params_dict, s_country, s_year, s_week, s_ctype):
+def peform_sorting(s_country, s_year, s_week, s_ctype, params_dict):
     global username, input_country, input_ctype
 
     if not all([s_country, s_year, s_week, s_ctype]):
@@ -41,8 +41,8 @@ def peform_sorting(params_dict, s_country, s_year, s_week, s_ctype):
 
     # Run sorting function
     sorted_output_path, sorted_all_path = backend.sorting(s_country, s_year, s_week, s_ctype, params_dict)
-    return sorted_output_path, sorted_all_path
     st.success("Sorting performed successfully!")
+    return sorted_output_path, sorted_all_path
 
 def compile_file(filename, country, ctype):
     if not filename:
