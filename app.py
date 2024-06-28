@@ -100,11 +100,7 @@ def sorting_layout():
         st.write("Sorting is being executed...")
         outcome = peform_sorting(country, year, week, country_type, params_dict)
         st.session_state['outcome'] = outcome
-
-    # Display download link if outcome exists and user clicks the button
-    # if st.button("Download sorted data as CSV"):
-        # st.write("Downloading sorted data...")
-    st.markdown(get_csv_download_link(st.session_state['outcome']), unsafe_allow_html=True)
+        st.markdown(get_csv_download_link(st.session_state['outcome']), unsafe_allow_html=True)
 
 # Define the Streamlit app layout for the Compilation tab
 def compile_layout():
