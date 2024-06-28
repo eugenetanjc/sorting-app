@@ -27,7 +27,7 @@ countrytype_options = [{'label': countrytype, 'value': countrytype} for countryt
 def peform_sorting(params_dict, s_country, s_year, s_week, s_ctype):
     global username, input_country, input_ctype
 
-    if not all([params_dict, s_country, s_year, s_week, s_ctype]):
+    if not all([s_country, s_year, s_week, s_ctype]):
         st.error("Please fill in all required fields.")
 
     # Check user input
@@ -74,7 +74,8 @@ def sorting_layout():
     st.subheader("Upload Parameters File")
     uploaded_file = st.file_uploader("Drag and Drop or Select Parameters file", type=["xlsx", "xls"])
     if uploaded_file is not None:
-        params_dict = pd.read_excel(uploaded_file)
+        xls = pd.ExcelFile(uploaded_file, engine='openpyxl')
+        params_dict = {sheet_name: pd.read_excel(xls, sheet_name=sheet_name) for sheet_name in xls.sheet_names}
         st.success("File uploaded successfully!")
 
     # Select your country
