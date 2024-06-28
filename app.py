@@ -33,16 +33,10 @@ def peform_sorting(s_country, s_year, s_week, s_ctype, params_dict):
     # Check user input
     print(f'Selected Country: {s_country}, Year: {s_year}, Week: {s_week}, Seasonality: {s_ctype}')
 
-    # Read parameters file into pandas df
-    # _, content_string = contents.split(',')
-    # decoded = base64.b64decode(content_string)
-    # xls = pd.ExcelFile(io.BytesIO(decoded), engine='openpyxl')
-    # params_dict = {sheet_name: pd.read_excel(xls, sheet_name=sheet_name) for sheet_name in xls.sheet_names}
-
     # Run sorting function
-    sorted_output_path, sorted_all_path = backend.sorting(s_country, s_year, s_week, s_ctype, params_dict)
+    output_df = backend.sorting(s_country, s_year, s_week, s_ctype, params_dict)
     st.success("Sorting performed successfully!")
-    return sorted_output_path, sorted_all_path
+    return output_df
 
 def compile_file(filename, country, ctype):
     if not filename:
@@ -97,9 +91,7 @@ def sorting_layout():
     # Run sorting now button
     if st.button("Run sorting now"):
         st.write("Sorting is being executed...")
-
         outcome = peform_sorting(country, year, week, country_type, params_dict)
-        st.success("Sorting completed successfully!")
 
     # Function to create a downloadable link for CSV file
     def get_csv_download_link(df, filename="sorted_data.csv"):

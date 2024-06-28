@@ -6,9 +6,6 @@ import requests
 from io import BytesIO
 from datetime import datetime
 import psycopg2
-from office365.runtime.auth.authentication_context import AuthenticationContext
-from office365.sharepoint.client_context import ClientContext
-from office365.sharepoint.files.file import File 
 import xlsxwriter
 from openpyxl import Workbook
 from openpyxl.drawing.image import Image
@@ -57,10 +54,8 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
                                 "Platform Covered Open-Back","Open Toe","Platform Open Toe"]
 
     key_sizes_df = params_dict["Parameters"].iloc[1:8, key_size_cols]
-    print(key_sizes_df)
     key_sizes_df.columns = ['Size', 'Key Size']
-    print("Done")
-    return "https://www.google.com", "https://www.charleskeith.com"
+
     # Reading SOH info from SOH worksheet
     soh_df = params_dict["SOH"].iloc[1:, 0:4]
     soh_df.columns = ["Article","SOH","Colour","Size"]
@@ -144,7 +139,7 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
 
     # Appending marketing list onto the Rough Working List
     processing_df['Marketing'] = processing_df['Article'].isin(marketing_items['Article'])
-
+    return processing_df
     # Reading discount info from datatable
     conn = psycopg2.connect(**params)
 
@@ -904,14 +899,3 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
     output_workbook.remove(output_workbook['Sheet'])     # Remove 'sheet' from excel file
 
     return dcc.send_data_frame(df.to_excel, "mydf.xlsx", sheet_name="Sheet_name_1")
-
-    # Save the output workbook after inserting images for the current sheet
-    # output_workbook.save(all_categories_file_path)
-    # print('Photos pasted into the sheets!')
-    # print('Final output for all categories ready for SF2 upload')
-
-    
-    # Print file path on shared folder
-    # shared_folder_path = r'//192.168.1.250/CKI Inventory/52. Data Science/SortingPinning/Countries'
-    # sorted_shared_folder_path = os.path.join(shared_folder_path, country, sorted_folder, all_categories_filename)
-    # return sorted_shared_folder_path, all_categories_file_path
