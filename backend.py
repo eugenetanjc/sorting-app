@@ -27,7 +27,7 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
         print(var, type(var))
 
     # Reading key size check parameters from Parameters worksheet
-    param_df = params_dict['Parameters']
+    param_df = params_dict['Parameters'].iloc[:, 0:2]
     param_dict = param_df.set_index("Parameter")["Value"].to_dict()
     Min_SOH_per_Article_Col = param_dict['Ideal OH Per Article-Color']
     Min_Num_KeySize_per_Article_Col = param_dict['Minimum Number of Key Sizes Per Article-Color']
