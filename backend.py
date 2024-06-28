@@ -59,7 +59,8 @@ def sorting(s_country, year, s_week, s_ctype, user, params_dict):
     key_sizes_df = params_dict["Parameters"].iloc[1:8, key_size_cols]
     print(key_sizes_df)
     key_sizes_df.columns = ['Size', 'Key Size']
-
+    print("Done")
+    return "https://www.google.com", "https://www.charleskeith.com"
     # Reading SOH info from SOH worksheet
     soh_df = params_dict["SOH"].iloc[1:, 0:4]
     soh_df.columns = ["Article","SOH","Colour","Size"]

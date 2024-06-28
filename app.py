@@ -24,23 +24,24 @@ country_options = [{'label': country, 'value': country} for country in [
     ]]
 countrytype_options = [{'label': countrytype, 'value': countrytype} for countrytype  in ['Hot', 'Cold', 'ANZ']]
 
-def peform_sorting(contents, s_country, s_year, s_week, s_ctype):
+def peform_sorting(params_dict, s_country, s_year, s_week, s_ctype):
     global username, input_country, input_ctype
 
-    if not all([contents, s_country, s_year, s_week, s_ctype]):
+    if not all([params_dict, s_country, s_year, s_week, s_ctype]):
         st.error("Please fill in all required fields.")
 
     # Check user input
     print(f'Selected Country: {s_country}, Year: {s_year}, Week: {s_week}, Seasonality: {s_ctype}')
 
     # Read parameters file into pandas df
-    _, content_string = contents.split(',')
-    decoded = base64.b64decode(content_string)
-    xls = pd.ExcelFile(io.BytesIO(decoded), engine='openpyxl')
-    params_dict = {sheet_name: pd.read_excel(xls, sheet_name=sheet_name) for sheet_name in xls.sheet_names}
+    # _, content_string = contents.split(',')
+    # decoded = base64.b64decode(content_string)
+    # xls = pd.ExcelFile(io.BytesIO(decoded), engine='openpyxl')
+    # params_dict = {sheet_name: pd.read_excel(xls, sheet_name=sheet_name) for sheet_name in xls.sheet_names}
 
     # Run sorting function
     sorted_output_path, sorted_all_path = backend.sorting(s_country, s_year, s_week, s_ctype, params_dict)
+    return sorted_output_path, sorted_all_path
     st.success("Sorting performed successfully!")
 
 def compile_file(filename, country, ctype):
@@ -73,7 +74,7 @@ def sorting_layout():
     st.subheader("Upload Parameters File")
     uploaded_file = st.file_uploader("Drag and Drop or Select Parameters file", type=["xlsx", "xls"])
     if uploaded_file is not None:
-        params_dict = pd.read_excel(uploaded_file, sheet_name=None)
+        params_dict = pd.read_excel(uploaded_file)
         st.success("File uploaded successfully!")
 
     # Select your country
