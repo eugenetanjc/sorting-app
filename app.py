@@ -47,7 +47,7 @@ def compile_file(filename, country, ctype):
         
     compiled_file_path = compile.compiling(country, ctype)
     st.success("Compiling performed successfully!")
-    
+
 # Function to create a downloadable link for CSV file
 def get_csv_download_link(df, filename="sorted_data.csv"):
     csv = df.to_csv(index=False)
@@ -102,9 +102,9 @@ def sorting_layout():
         st.session_state['outcome'] = outcome
 
     # Display download link if outcome exists and user clicks the button
-    if st.button("Download sorted data as CSV"):
-        st.write("Downloading sorted data...")
-        st.markdown(get_csv_download_link(st.session_state['outcome']), unsafe_allow_html=True)
+    # if st.button("Download sorted data as CSV"):
+        # st.write("Downloading sorted data...")
+    st.markdown(get_csv_download_link(st.session_state['outcome']), unsafe_allow_html=True)
 
 # Define the Streamlit app layout for the Compilation tab
 def compile_layout():
