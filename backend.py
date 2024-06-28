@@ -18,7 +18,7 @@ warnings.filterwarnings("ignore")
 from PIL import Image as PILImage
 from dash import dcc
 
-def sorting(s_country, year, s_week, s_ctype, user, params_dict):
+def sorting(s_country, year, s_week, s_ctype, params_dict):
 
     # Processing user input
     country = "".join([str(current_country) for current_country in s_country])
@@ -26,7 +26,7 @@ def sorting(s_country, year, s_week, s_ctype, user, params_dict):
     countrytype = "".join([str(current_ctype) for current_ctype in s_ctype])
     year = int(year)
 
-    for var in [country, year, week, countrytype, user]:    
+    for var in [country, year, week, countrytype]:    
         print(var, type(var))
 
     # Reading key size check parameters from Parameters worksheet
