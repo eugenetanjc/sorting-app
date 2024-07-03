@@ -3,10 +3,14 @@ import streamlit as st
 import pandas as pd
 import os
 import io
+from io import BytesIO
 import base64
 import backend
 import compile
 from datetime import datetime
+from openpyxl import Workbook
+from openpyxl.drawing.image import Image
+from openpyxl import load_workbook
 
 # Define global variables
 image_filename = 'data/ck_logo.png'
@@ -49,10 +53,46 @@ def compile_file(filename, country, ctype):
     st.success("Compiling performed successfully!")
 
 # Function to create a downloadable link for CSV file
-def get_csv_download_link(df, filename="sorted_data.csv"):
-    csv = df.to_csv(index=False)
-    b64 = base64.b64encode(csv.encode()).decode()  # Encode as base64
-    href = f'<a href="data:file/csv;base64,{b64}" download="{filename}">Download CSV file</a>'
+def get_csv_download_link(df, filename="sorted_data.xlsx"):
+    
+    # Loop through the rows of the DataFrame and split the data into sheets based on the 'Category ID' values
+    sheets = {}
+    for _, row in df.iterrows():
+        category_id = row['Category ID']
+        if category_id not in sheets:
+            sheets[category_id] = pd.DataFrame(columns=df.columns)
+        sheets[category_id] = pd.concat([sheets[category_id], row.to_frame().T])
+
+    # Create a new workbook object for the output file
+    output_workbook = Workbook()
+
+    # Loop through the sheets and add them to the output workbook
+    for category_id, sheet_df in sheets.items():
+        sheet_df.drop_duplicates(subset=['Article'], keep='first', inplace=True)
+        output_worksheet = output_workbook.create_sheet(category_id)
+        row_index = 0
+
+        # Append column headers
+        output_worksheet.append(sheet_df.columns.tolist())
+        
+        # Append data rows
+        for row in sheet_df.itertuples(index=False, name=None):
+            output_worksheet.append(row)
+
+    output_workbook.remove(output_workbook['Sheet'])  
+
+    # Save the workbook to a BytesIO object
+    excel_buffer = BytesIO()
+    output_workbook.save(excel_buffer)
+    excel_buffer.seek(0)
+
+    # csv = df.to_csv(index=False)
+    # b64 = base64.b64encode(csv.encode()).decode()  # Encode as base64
+    # href = f'<a href="data:file/csv;base64,{b64}" download="{filename}">Download CSV file</a>'
+    # return href
+
+    b64 = base64.b64encode(excel_buffer.read()).decode()
+    href = f'<a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64}" download="{filename}">Download Excel file</a>'
     return href
     
 def sorting_layout():
