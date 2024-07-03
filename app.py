@@ -4,6 +4,8 @@ import pandas as pd
 import os
 import io
 from io import BytesIO
+import requests
+from PIL import Image as PILImage
 import base64
 import backend
 import compile
@@ -72,6 +74,53 @@ def get_csv_download_link(df, filename="sorted_data.xlsx"):
         output_worksheet = output_workbook.create_sheet(category_id)
         row_index = 0
 
+        # Loop through each row in the sheet DataFrame
+        for index, row in sheet_df.iterrows():
+            article_number = row['Article']
+            directory = 'https://images.e-charleskeith.com/Article/'
+            image_path = directory + str(article_number) + '.jpg'
+
+            try: 
+                response = requests.get(image_path, verify=False, timeout = (30, 30))
+
+                if response.status_code == 200: 
+                    pil_image = PILImage.open(BytesIO(response.content))
+                    image_width, image_height = pil_image.size
+
+                    if image_height > image_width:
+                        pil_image = pil_image.rotate(90)
+
+                    # Convert PIL image back to bytes
+                    image_bytes = BytesIO()
+                    rgb_img = pil_image.convert('RGB')
+                    rgb_img.save(image_bytes, format='JPEG')
+                    image_bytes.seek(0)
+                    
+                    img = Image(image_bytes)
+                    
+                    column_width = 2.0 / 2.54 * 160
+                    row_height = 3.0 / 2.54 * 64
+
+                    img.width = int(column_width)
+                    img.height = int(row_height)
+
+                    cell = 'F{}'.format(row_index + 2)
+                    output_worksheet.add_image(img, cell)
+
+            except requests.Timeout:
+                print(f"The request timed out for article {article_number}")
+                continue
+            except requests.RequestException as e:
+                print(f"An error occurred for article {article_number}: {e}")
+                continue
+            
+            row_index += 1
+
+        for i in range(1, sheet_df.shape[0] + 2):
+            output_worksheet.row_dimensions[i].height = 59.5
+            for col in ['E', 'F']:
+                output_worksheet.column_dimensions[col].width = 18
+
         # Append column headers
         output_worksheet.append(sheet_df.columns.tolist())
         
@@ -85,11 +134,6 @@ def get_csv_download_link(df, filename="sorted_data.xlsx"):
     excel_buffer = BytesIO()
     output_workbook.save(excel_buffer)
     excel_buffer.seek(0)
-
-    # csv = df.to_csv(index=False)
-    # b64 = base64.b64encode(csv.encode()).decode()  # Encode as base64
-    # href = f'<a href="data:file/csv;base64,{b64}" download="{filename}">Download CSV file</a>'
-    # return href
 
     b64 = base64.b64encode(excel_buffer.read()).decode()
     href = f'<a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64}" download="{filename}">Download Excel file</a>'
