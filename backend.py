@@ -527,7 +527,7 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
                                         (SFupload_df['Repeat'] == False)) | (SFupload_df['Is New Arrival'] == 1) | (SFupload_df['Is Main Category'] == 1).astype(int)
     SFupload_df['SC ID'] = np.where(SFupload_df['Stage ID Check'] == 1,
                                     "mcsunglasses",
-                                    0)
+                                    "0")
 
     # Save to working output folder
     sg_sorted_df, naid_one_sg  = get_final_output('Sunglasses')
@@ -557,7 +557,7 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
                                         (~SFupload_df['Repeat'])) | (SFupload_df['Is New Arrival'] == 1) | (SFupload_df['Is Main Category'] == 1).astype(int)
     SFupload_df['SC ID'] = np.where(SFupload_df['Stage ID Check'] == 1,
                                     "mcjewellery",
-                                    0)
+                                    "0")
 
     # Save to working output folder
     j_sorted_df, naid_one_j = get_final_output('Jewellery')
@@ -586,7 +586,7 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
                                         (~SFupload_df['Repeat'])) | (SFupload_df['Is New Arrival'] == 1) | (SFupload_df['Is Main Category'] == 1).astype(int)
     SFupload_df['SC ID'] = np.where(SFupload_df['Stage ID Check'] == 1,
                                     "mcaccessories",
-                                    0)
+                                    "0")
 
     # Save to working output folder
     acc_sorted_df, naid_one_acc  = get_final_output('Accessories')
