@@ -1,8 +1,9 @@
+import pandas as pd
+import os
+import openpyxl
+from datetime import datetime
+
 def compiling(working_output_path, country, countrytype, user):
-    import pandas as pd
-    import os
-    import openpyxl
-    from datetime import datetime
 
     # Get the current date
     now = datetime.now()

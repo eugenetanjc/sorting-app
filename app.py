@@ -10,6 +10,7 @@ import base64
 import backend
 import compile
 from datetime import datetime
+import openpyxl
 from openpyxl import Workbook
 from openpyxl.drawing.image import Image
 from openpyxl import load_workbook
@@ -207,9 +208,19 @@ def compile_layout():
         if uploaded_files:
             st.write("Compiling working file...")
 
+            combined_df = pd.DataFrame()
+
             for uploaded_file in uploaded_files:
-                df = pd.read_excel(uploaded_file)
-                # Perform necessary processing on df
+                # Load the workbook 
+                workbook = openpyxl.load_workbook(uploaded_file)
+                dfs = [pd.read_excel(BytesIO(uploaded_file.getvalue()), sheet_name=sheet_name, usecols="A:D", engine='openpyxl') for sheet_name in workbook.sheetnames]
+                combined_df = pd.concat([combined_df, pd.concat(dfs, ignore_index=True)], ignore_index=True)
+                
+            csv = combined_df.to_csv(index=False)
+            b64 = base64.b64encode(csv.encode()).decode()  # Encode as base64
+            href = f'<a href="data:file/csv;base64,{b64}" download="compiled_file.csv">Download CSV file</a>'
+            st.markdown(href, unsafe_allow_html=True)
+            
             st.success("Compilation complete!")
         else:
             st.error("Please upload at least one file.")
