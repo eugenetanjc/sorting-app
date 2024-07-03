@@ -42,7 +42,7 @@ def peform_sorting(s_country, s_year, s_week, s_ctype, params_dict):
 
     # Run sorting function
     output_df = backend.sorting(s_country, s_year, s_week, s_ctype, params_dict)
-    st.success("Sorting performed successfully!")
+    st.success("Sorting performed successfully! Adding photos...")
     return output_df
 
 def compile_file(filename, country, ctype):
@@ -75,52 +75,52 @@ def get_csv_download_link(df, filename="sorted_data.xlsx"):
         output_worksheet = output_workbook.create_sheet(category_id)
         row_index = 0
 
-        # Loop through each row in the sheet DataFrame
-        for index, row in sheet_df.iterrows():
-            article_number = row['Article']
-            directory = 'https://images.e-charleskeith.com/Article/'
-            image_path = directory + str(article_number) + '.jpg'
+        # # Loop through each row in the sheet DataFrame
+        # for index, row in sheet_df.iterrows():
+        #     article_number = row['Article']
+        #     directory = 'https://images.e-charleskeith.com/Article/'
+        #     image_path = directory + str(article_number) + '.jpg'
 
-            try: 
-                response = requests.get(image_path, verify=False, timeout = (30, 30))
+        #     try: 
+        #         response = requests.get(image_path, verify=False, timeout = (30, 30))
 
-                if response.status_code == 200: 
-                    pil_image = PILImage.open(BytesIO(response.content))
-                    image_width, image_height = pil_image.size
+        #         if response.status_code == 200: 
+        #             pil_image = PILImage.open(BytesIO(response.content))
+        #             image_width, image_height = pil_image.size
 
-                    if image_height > image_width:
-                        pil_image = pil_image.rotate(90)
+        #             if image_height > image_width:
+        #                 pil_image = pil_image.rotate(90)
 
-                    # Convert PIL image back to bytes
-                    image_bytes = BytesIO()
-                    rgb_img = pil_image.convert('RGB')
-                    rgb_img.save(image_bytes, format='JPEG')
-                    image_bytes.seek(0)
+        #             # Convert PIL image back to bytes
+        #             image_bytes = BytesIO()
+        #             rgb_img = pil_image.convert('RGB')
+        #             rgb_img.save(image_bytes, format='JPEG')
+        #             image_bytes.seek(0)
                     
-                    img = Image(image_bytes)
+        #             img = Image(image_bytes)
                     
-                    column_width = 2.0 / 2.54 * 160
-                    row_height = 3.0 / 2.54 * 64
+        #             column_width = 2.0 / 2.54 * 160
+        #             row_height = 3.0 / 2.54 * 64
 
-                    img.width = int(column_width)
-                    img.height = int(row_height)
+        #             img.width = int(column_width)
+        #             img.height = int(row_height)
 
-                    cell = 'F{}'.format(row_index + 2)
-                    output_worksheet.add_image(img, cell)
+        #             cell = 'F{}'.format(row_index + 2)
+        #             output_worksheet.add_image(img, cell)
 
-            except requests.Timeout:
-                print(f"The request timed out for article {article_number}")
-                continue
-            except requests.RequestException as e:
-                print(f"An error occurred for article {article_number}: {e}")
-                continue
+        #     except requests.Timeout:
+        #         print(f"The request timed out for article {article_number}")
+        #         continue
+        #     except requests.RequestException as e:
+        #         print(f"An error occurred for article {article_number}: {e}")
+        #         continue
             
-            row_index += 1
+        #     row_index += 1
 
-        for i in range(1, sheet_df.shape[0] + 2):
-            output_worksheet.row_dimensions[i].height = 59.5
-            for col in ['E', 'F']:
-                output_worksheet.column_dimensions[col].width = 18
+        # for i in range(1, sheet_df.shape[0] + 2):
+        #     output_worksheet.row_dimensions[i].height = 59.5
+        #     for col in ['E', 'F']:
+        #         output_worksheet.column_dimensions[col].width = 18
 
         # Append column headers
         output_worksheet.append(sheet_df.columns.tolist())
@@ -186,6 +186,7 @@ def sorting_layout():
         outcome = peform_sorting(country, year, week, country_type, params_dict)
         st.session_state['outcome'] = outcome
         st.markdown(get_csv_download_link(st.session_state['outcome']), unsafe_allow_html=True)
+        st.success("File is ready for download!")
 
 # Define the Streamlit app layout for the Compilation tab
 def compile_layout():
