@@ -49,7 +49,7 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
                                "Platform Covered Open-Back","Open Toe","Platform Open Toe"]
     else:
         key_size_cols = slice(10, 12)  
-        calendar_df = params_dict["Seasonal Calendar"].iloc[3:55, 24:34]
+        calendar_df = params_dict["Seasonal Calendar"].iloc[3:55, 24:33]
         calendar_df.columns = ["Month","week","Boots","Covered","Platform Covered","Covered Open-Back",
                                 "Platform Covered Open-Back","Open Toe","Platform Open Toe"]
 
@@ -139,7 +139,7 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
 
     # Appending marketing list onto the Rough Working List
     processing_df['Marketing'] = processing_df['Article'].isin(marketing_items['Article'])
-    return processing_df
+    
     # Reading discount info from datatable
     conn = psycopg2.connect(**params)
 
@@ -229,7 +229,7 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
     stocktype_ref['Stock Type'] = stocktype_ref['Stock Type'].map(stocktype_ref_dict)
 
     # Appending stock type onto the Rough Working List
-    processing_df = processing_df.merge(stocktype_ref, left_on = "Article", right_on = "Article", how = 'left')
+    processing_df = processing_df.merge(stocktype_ref, on = "Article", how = 'left')
     processing_df = processing_df.drop_duplicates(subset=['Article'])
 
     # Reading Repeats info from worksheet
@@ -252,7 +252,8 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
     # The sheets are saved into a dictionary
     ref_dfs = {}
     for ref_name, ref_info in ref_sheets.items():
-        df = params_dict["sheet_name"].iloc[1:, ref_info["columns"]]
+        df = params_dict[ref_info["sheet_name"]].iloc[1:, ref_info["columns"]]
+        df.columns = ref_info['names']
         ref_dfs[ref_name] = df
 
     # Function for initial sorting of products by category
@@ -275,7 +276,7 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
         SOHbyTheme_df = selected_category.groupby(['Theme'],as_index=False).agg({'SOH': 'sum'})
         SOHbyTheme_df.rename(columns={'SOH':'SOH By Theme'},inplace=True)
         SOHbyTheme_df.dropna(subset=['Theme'], inplace=True)
-        products_sorting = products_sorting.merge(SOHbyTheme_df, on = "Theme", how='left')
+        products_sorting = selected_category.merge(SOHbyTheme_df, on = "Theme", how='left')
 
         # Add in products in Core Group (only for Bags and Shoes)
         if product_category == ('Bags' or 'Shoes'):
@@ -285,16 +286,13 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
             products_sorting = products_sorting.merge(core_ref, on = "Article", how = "left")
 
         # Initial sorting using the columns added thus far
-        sorted_products = products_sorting.sort_values(['Marketing', 'New Arrival', 'Repeat', 'Group Min Weeks', 'Key Size Check', 
+        sorted_products = products_sorting.sort_values(['Marketing', 'New Arrival', 'Repeat', 'Key Size Check', 
                                                         'Colour', 'Weeks Launched','Stock Type','SOH By Theme', 'SOH'], 
-                                                        ascending=[False, False, False, True, False,
-                                                                   False, True, False, False, False])
+                                                        ascending=[False, False, False, False,
+                                                                    False, True, False, False, False])
         
-        # Saving to Working Output file in respective country folder
-        sorted_folder = "Working Output"
-        sorted_filename = f"Sorting Art Check {product_category} {year} W{week} {user}.csv"
         sorted_products = sorted_products.reindex(columns=['Article', 'Marketing', 'New Arrival', 'Repeat', 
-                                                            'Core Group', 'Group Min Weeks', 'Key Size Check',
+                                                            'Core Group', 'Key Size Check',
                                                             'Colour','Weeks Launched', 'Stock Type', 'Seasonal Focus',
                                                             'SOH', 'Class', 'Sub Class', 'Theme', 'Season', 'Category',
                                                             'Category Name', 'Size', 'First Sales Date', 'SOH By Theme'])
@@ -325,49 +323,19 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
     
     # Function to group products by core group and family mapping
     def product_grouping(sorted_items):
-        
+
         # Sort by columns
-        sort_columns = ['Marketing', 'New Arrival', 'Repeat', 'Group Min Weeks', 
+        sort_columns = ['Marketing', 'New Arrival', 'Repeat', 
                         'Key Size Check', 'Colour', 'Weeks Launched', 'Stock Type', 
                         'SOH By Theme', 'SOH']
-        sort_order = [False, False, False, True, 
-                      False, False, True, False, 
-                      False, False]
+        sort_order = [False, False, False, 
+                        False, False, True, False, 
+                        False, False]
         sorted_items_core = sorted_items.sort_values(sort_columns, ascending=sort_order).copy()
 
-        # Create a temp_sort dataframe that has the same column names as sorted_items_core
-        temp_sort = pd.DataFrame(columns=[col for col in sorted_items_core.columns])
-
-        # loop through sorted items by row
-        for _, row in sorted_items_core.iterrows():
-            if row['Article'] not in (temp_sort['Article'].unique()):             # check if article has already been appended to temp_sort
-
-                # if NaN_pos is not 0 (belongs to core group) AND Map_pos is 0 (no family map), group all articles with same NaN_pos (in same core group) together
-                if row['Core_pos'] != 0 and row['Map_pos'] == 0:
-                    temp_df = sorted_items_core[(sorted_items_core['Core_pos'] == row['Core_pos']) & 
-                                                ~(sorted_items_core['Article'].isin(temp_sort['Article'].unique()))]
-                    temp_sort = pd.concat([temp_sort, temp_df], axis=0)
-                            
-                # if NaN_pos is not 0 (belongs to core group) AND Map_pos is not 0 (with family map), group all the rows in same core group, and same fam map too, prioritizing fam_map
-                elif row['Core_pos'] != 0 and row['Map_pos'] != 0:
-                    temp_df = sorted_items_core[(sorted_items_core['Core_pos'] == row['Core_pos']) & 
-                                                (sorted_items_core['Map_pos'] == row['Map_pos']) & 
-                                                ~(sorted_items_core['Article'].isin(temp_sort['Article'].unique()))]
-                    temp_sort = pd.concat([temp_sort, temp_df], axis=0)
-                        
-                # if NaN_pos is 0 (no core group) AND Map_pos is not 0 (with family map), group all the rows with the same Map_pos together (in same fam map)
-                elif row['Core_pos'] == 0 and row['Map_pos'] !=0:
-                    temp_df = sorted_items_core[(sorted_items_core['Map_pos'] == row['Map_pos']) & 
-                                                ~(sorted_items_core['Article'].isin(temp_sort['Article'].unique()))]
-                    temp_sort = pd.concat([temp_sort, temp_df], axis=0)
-
-                # if both NaN_pos and Map_pos are 0 (no core group or family map), append the row directly
-                else:
-                    temp_sort = pd.concat([temp_sort, row.to_frame().T], axis=0)
-
         # Remove duplicates
-        temp_sort.dropna(subset=['Article'], inplace=True)
-        sorted_by_groups = temp_sort.drop_duplicates(subset=['Article'], keep='first').copy()
+        sorted_items_core.dropna(subset=['Article'], inplace=True)
+        sorted_by_groups = sorted_items_core.drop_duplicates(subset=['Article'], keep='first').copy()
         sorted_by_groups.reset_index(drop=True, inplace=True)
 
         # Put low priority items at the bottom
@@ -375,17 +343,16 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
                                             (sorted_by_groups['New Arrival'] == False) & 
                                             (sorted_by_groups['Repeat'] == False) & 
                                             (sorted_by_groups['Core Group'].isna())]
-        
+
         no_priority = sorted_by_groups.iloc[conditions]
         priority = sorted_by_groups.drop(index=conditions)
         sorted_by_groups = pd.concat([priority, no_priority]).reset_index(drop=True)
 
         return sorted_by_groups
-    
+
     # Bags
-    sorted_bags_core, sorted_bags_path = product_sorting('Bags')
+    sorted_bags_core = product_sorting('Bags')
     sorted_bags_by_groups = product_grouping(sorted_bags_core)
-    sorted_bags_by_groups.to_csv(sorted_bags_path, index=False)
 
     # Prepping MC, NA and SC IDs for copy and paste process afterwards
     SFupload_df = sorted_bags_by_groups.copy()
@@ -438,103 +405,72 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
                                     SFupload_df['NA ID'])
     # Stage ID
     SFupload_df['Stage ID Check'] = ((SFupload_df['Marketing'] == False) & 
-                                     (SFupload_df['New Arrival'] == False) & 
-                                     (SFupload_df['Repeat'] == False)) | (SFupload_df['Is New Arrival'] == 1) | (SFupload_df['Is Main Category'] == 1).astype(int)
+                                        (SFupload_df['New Arrival'] == False) & 
+                                        (SFupload_df['Repeat'] == False)) | (SFupload_df['Is New Arrival'] == 1) | (SFupload_df['Is Main Category'] == 1).astype(int)
     SFupload_df['SC ID'] = np.where(SFupload_df['Stage ID Check'] == 1, SFupload_df['SID'], 0)
     SFupload_df['SC ID'] = np.where((SFupload_df['SC ID'].isnull()) | (SFupload_df['SC ID'].str.len() == 0),
                                     SFupload_df.apply(add_slgtags, axis=1), 
                                     SFupload_df['SC ID'])
 
-    # Final sorting based on MC ID, SC ID and NA ID
-    def get_final_output(product_category_string, product_category_path):
-        workbook = xlsxwriter.Workbook(product_category_path)
-        workbook.close()
-
+    def get_final_output(product_category_string):
         # Filter for MC ID
         print("-------------------------------------------------------------------------------")
         mcid_one = SFupload_df.loc[SFupload_df['Is Main Category'] == 1]
-        mcid_one = mcid_one[['Product ID','MC ID','Catalog ID','Values']]
-        mcid_one.rename(columns={'MC ID':'Category ID'},inplace=True)
+        mcid_one = mcid_one[['Product ID', 'MC ID', 'Catalog ID', 'Values']]
+        mcid_one.rename(columns={'MC ID': 'Category ID'}, inplace=True)
 
-        with pd.ExcelWriter(product_category_path, engine="openpyxl", if_sheet_exists='replace', mode='a') as writer:
-            mcid_one.to_excel(writer, sheet_name='MC ID', index=False)
-            
-        print(f'Output for MC ID {product_category_string} saved!')
+        print(f'Output for MC ID {product_category_string} prepared!')
         print("-------------------------------------------------------------------------------")
 
         # Filter for SC ID
-        if product_category_string == 'Shoes':                      # For shoes, there is SC ID 1 and SC ID 2
+        if product_category_string == 'Shoes':  # For shoes, there is SC ID 1 and SC ID 2
             scid_one = SFupload_df.loc[SFupload_df['Stage ID Check'] == 1]
-            scid_one = scid_one[['Product ID','SC ID 1','Catalog ID','Values']]
-            scid_one.rename(columns={'SC ID 1':'Category ID'},inplace=True)
-
-            with pd.ExcelWriter(sorted_shoes_path, engine="openpyxl",  if_sheet_exists='replace', mode='a') as writer:
-                scid_one.to_excel(writer, sheet_name='SC ID 1', index=False)
+            scid_one = scid_one[['Product ID', 'SC ID 1', 'Catalog ID', 'Values']]
+            scid_one.rename(columns={'SC ID 1': 'Category ID'}, inplace=True)
 
             scid_two = SFupload_df.loc[SFupload_df['Stage ID Check'] == 1]
-            scid_two = scid_two[['Product ID','SC ID 2','Catalog ID','Values']]
-            scid_two.rename(columns={'SC ID 2':'Category ID'},inplace=True)
+            scid_two = scid_two[['Product ID', 'SC ID 2', 'Catalog ID', 'Values']]
+            scid_two.rename(columns={'SC ID 2': 'Category ID'}, inplace=True)
 
-            with pd.ExcelWriter(product_category_path, engine="openpyxl",  if_sheet_exists='replace', mode='a') as writer:
-                scid_two.to_excel(writer, sheet_name='SC ID 2', index=False)
+            print(f'Output for SC ID 1 and SC ID 2 {product_category_string} prepared!')
 
-        else:                                                       # For others, there is only SC ID
+        else:  # For others, there is only SC ID
             scid_one = SFupload_df.loc[SFupload_df['Stage ID Check'] == 1]
-            scid_one = scid_one[['Product ID','SC ID','Catalog ID','Values']]
-            scid_one.rename(columns={'SC ID':'Category ID'},inplace=True)
+            scid_one = scid_one[['Product ID', 'SC ID', 'Catalog ID', 'Values']]
+            scid_one.rename(columns={'SC ID': 'Category ID'}, inplace=True)
+            
+            scid_two = pd.DataFrame()  # Empty dataframe as a placeholder
 
-            with pd.ExcelWriter(product_category_path, engine="openpyxl",  if_sheet_exists='replace', mode='a') as writer:
-                scid_one.to_excel(writer, sheet_name='SC ID', index=False)
-                
-        print(f'Output for SC ID {product_category_string} saved!')
+            print(f'Output for SC ID {product_category_string} prepared!')
         print("-------------------------------------------------------------------------------")
 
         # Filter for NA ID
         naid_one = SFupload_df.loc[SFupload_df['Is New Arrival'] == 1]
-        naid_one = naid_one[['Product ID','NA ID','Catalog ID','Values']]
-        naid_one.rename(columns={'NA ID':'Category ID'},inplace=True)
+        naid_one = naid_one[['Product ID', 'NA ID', 'Catalog ID', 'Values']]
+        naid_one.rename(columns={'NA ID': 'Category ID'}, inplace=True)
 
-        with pd.ExcelWriter(product_category_path, engine="openpyxl",  if_sheet_exists='replace', mode='a') as writer:
-            naid_one.to_excel(writer, sheet_name='NA ID', index=False)
-
-        print(f'Output for NA ID {product_category_string} saved!')
+        print(f'Output for NA ID {product_category_string} prepared!')
         print("-------------------------------------------------------------------------------")
 
-        # Remove 'Sheet 1' from excel file
-        #wb = load_workbook(product_category_path)
-        #wb.remove(wb['Sheet1'])
-        #wb.save(product_category_path)
-        
-        # Combine all dataframes into 1 dataframe
-        all_tagged = pd.concat(pd.read_excel(product_category_path, 
-                                             sheet_name=None, 
-                                             engine='openpyxl'), 
-                                             ignore_index=True)
+        # Combine all dataframes into one dataframe
+        all_tagged = pd.concat([mcid_one, scid_one, scid_two, naid_one], ignore_index=True)
 
         if product_category_string == 'Shoes':
-            ck17_article_df = all_tagged[all_tagged['Product ID'].str.startswith('CK17')]             # Remove CK17
-            blank_category_df = all_tagged[all_tagged['Category ID'].isnull()]                        # Remove those without Category ID
+            ck17_article_df = all_tagged[all_tagged['Product ID'].str.startswith('CK17')]  # Remove CK17
+            blank_category_df = all_tagged[all_tagged['Category ID'].isnull()]  # Remove those without Category ID
             filtered_df = pd.concat([ck17_article_df, blank_category_df])
             all_tagged.drop(filtered_df.index, inplace=True)
 
-        # Save sorted products as csv 
-        csv_file_name = product_category_path.split('.xlsx')[0].split('/')[-1] + f".csv"
-        csv_file_path = os.path.join(root_folder_path, country, sorted_folder, csv_file_name)
-        all_tagged.to_csv(csv_file_path, index=False)
-        print(f'Final Output for {product_category_string} for this week saved!')
-
+        # Instead of saving, return the dataframes
+        print(f'Final Output for {product_category_string} for this week prepared!')
+        
         return all_tagged, naid_one
     
-    # Save to working output folder
-    sorted_filename_bags = f"Sorted Bags & SLG {year} W{week} {user}.xlsx"
-    sorted_folder = "Working Output"
-    sorted_bags_path = os.path.join(root_folder_path, country, sorted_folder, sorted_filename_bags)
-    bags_sorted_df, naid_one_bagsslg = get_final_output('Bags', sorted_bags_path)
+    bags_sorted_df, naid_one_bagsslg = get_final_output('Bags')
 
     # Shoes
-    sorted_shoes_core, sorted_shoes_path = product_sorting('Shoes')
+    sorted_shoes_core  = product_sorting('Shoes')
     sorted_shoes_by_groups = product_grouping(sorted_shoes_core)
-    sorted_shoes_by_groups.to_csv(sorted_shoes_path, index=False)
 
     # Prepping MC, NA and SC IDs for copy and paste process afterwards
     SFupload_df = sorted_shoes_by_groups.copy()
@@ -555,22 +491,20 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
 
     # Add SC ID column based on conditions
     SFupload_df['Stage ID Check'] = ((SFupload_df['Marketing'] == False) & 
-                                     (SFupload_df['New Arrival'] == False) & 
-                                     (SFupload_df['Repeat'] == False)) | (SFupload_df['Is New Arrival'] == 1) | (SFupload_df['Is Main Category'] == 1).astype(int)
+                                        (SFupload_df['New Arrival'] == False) & 
+                                        (SFupload_df['Repeat'] == False)) | (SFupload_df['Is New Arrival'] == 1) | (SFupload_df['Is Main Category'] == 1).astype(int)
     SFupload_df['SC ID 1'] = np.where(SFupload_df['Stage ID Check'] == 1,
-                                      SFupload_df['SID_x'],
-                                      0)
+                                        SFupload_df['SID_x'],
+                                        0)
     SFupload_df['SC ID 2'] = np.where(SFupload_df['Stage ID Check'] == 1,
-                                      SFupload_df['SID_y'],
-                                      0)
+                                        SFupload_df['SID_y'],
+                                        0)
 
     # Save to working output folder
-    sorted_filename_shoes = f"Sorted Footwear {year} W{week} {user}.xlsx"
-    sorted_shoes_path = os.path.join(root_folder_path, country, sorted_folder, sorted_filename_shoes)
-    shoes_sorted_df, naid_one_shoes = get_final_output('Shoes', sorted_shoes_path)
+    shoes_sorted_df, naid_one_shoes = get_final_output('Shoes')
 
     # Sunglasses
-    sorted_sg, sorted_sg_path = product_sorting('Sunglasses')
+    sorted_sg = product_sorting('Sunglasses')
     SFupload_df = sorted_sg.copy()
 
     # Add MC ID column based on conditions
@@ -589,19 +523,17 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
 
     # Add SC ID column based on conditions
     SFupload_df['Stage ID Check'] = ((SFupload_df['Marketing'] == False) & 
-                                     (SFupload_df['New Arrival'] == False) & 
-                                     (SFupload_df['Repeat'] == False)) | (SFupload_df['Is New Arrival'] == 1) | (SFupload_df['Is Main Category'] == 1).astype(int)
+                                        (SFupload_df['New Arrival'] == False) & 
+                                        (SFupload_df['Repeat'] == False)) | (SFupload_df['Is New Arrival'] == 1) | (SFupload_df['Is Main Category'] == 1).astype(int)
     SFupload_df['SC ID'] = np.where(SFupload_df['Stage ID Check'] == 1,
                                     "mcsunglasses",
                                     0)
 
     # Save to working output folder
-    sorted_filename_sg = f"Sorted Sunglasses {year} W{week} {user}.xlsx"
-    sorted_sg_path = os.path.join(root_folder_path, country, sorted_folder, sorted_filename_sg)
-    sg_sorted_df, naid_one_sg  = get_final_output('Sunglasses', sorted_sg_path)
+    sg_sorted_df, naid_one_sg  = get_final_output('Sunglasses')
 
     # Jewellery
-    sorted_j, sorted_j_path = product_sorting('Jewellery')
+    sorted_j = product_sorting('Jewellery')
     SFupload_df = sorted_j.copy()
 
 
@@ -621,19 +553,17 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
 
     # Add SC ID column based on conditions
     SFupload_df['Stage ID Check'] = ((~SFupload_df['Marketing']) & 
-                                     (~SFupload_df['New Arrival']) & 
-                                     (~SFupload_df['Repeat'])) | (SFupload_df['Is New Arrival'] == 1) | (SFupload_df['Is Main Category'] == 1).astype(int)
+                                        (~SFupload_df['New Arrival']) & 
+                                        (~SFupload_df['Repeat'])) | (SFupload_df['Is New Arrival'] == 1) | (SFupload_df['Is Main Category'] == 1).astype(int)
     SFupload_df['SC ID'] = np.where(SFupload_df['Stage ID Check'] == 1,
                                     "mcjewellery",
                                     0)
 
     # Save to working output folder
-    sorted_filename_j = f"Sorted Jewellery {year} W{week} {user}.xlsx"
-    sorted_j_path = os.path.join(root_folder_path, country, sorted_folder, sorted_filename_j)
-    j_sorted_df, naid_one_j = get_final_output('Jewellery', sorted_j_path)
+    j_sorted_df, naid_one_j = get_final_output('Jewellery')
 
     # Accessories
-    sorted_acc, sorted_acc_path = product_sorting('Accessories')
+    sorted_acc = product_sorting('Accessories')
     SFupload_df = sorted_acc.copy()
 
     # Add MC ID column based on conditions
@@ -652,16 +582,14 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
 
     # Add SC ID column based on conditions
     SFupload_df['Stage ID Check'] = ((~SFupload_df['Marketing']) & 
-    	                             (~SFupload_df['New Arrival']) & 
-    	                             (~SFupload_df['Repeat'])) | (SFupload_df['Is New Arrival'] == 1) | (SFupload_df['Is Main Category'] == 1).astype(int)
+                                        (~SFupload_df['New Arrival']) & 
+                                        (~SFupload_df['Repeat'])) | (SFupload_df['Is New Arrival'] == 1) | (SFupload_df['Is Main Category'] == 1).astype(int)
     SFupload_df['SC ID'] = np.where(SFupload_df['Stage ID Check'] == 1,
                                     "mcaccessories",
                                     0)
 
     # Save to working output folder
-    sorted_filename_acc = f"Sorted Accessories {year} W{week} {user}.xlsx"
-    sorted_acc_path = os.path.join(root_folder_path, country, sorted_folder, sorted_filename_acc)
-    acc_sorted_df, naid_one_acc  = get_final_output('Accessories', sorted_acc_path)
+    acc_sorted_df, naid_one_acc  = get_final_output('Accessories')
 
     # Gift Set (manual entry of data)
     giftset_data = {
@@ -689,26 +617,6 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
     new_arrivals_combined = pd.DataFrame(pd.concat([naid_one_shoes, naid_one_bagsslg, naid_one_sg, naid_one_j, naid_one_acc], 
                                                     axis=0, ignore_index=True))
     new_arrivals_combined = new_arrivals_combined.sort_values(['Category ID'], ascending=[True])
-
-    # Add Family Mapping column
-    # all_sorted_categories = pd.concat([sorted_bags_by_groups, sorted_shoes_by_groups, sorted_sg, sorted_j, sorted_acc])
-    # new_arrivals_combined = pd.merge(new_arrivals_combined, all_sorted_categories[['Product ID', 'Family Mapping']], on = 'Product ID', how = 'left')
-
-    # # Add Map Order column to keep track of sequence of family mapping
-    # sequence_dict = {}
-
-    # for num, row in new_arrivals_combined.iterrows():
-    #     family_mapping = row['Family Mapping']
-    #     category_id = row['Category ID']
-        
-    #     if pd.notna(family_mapping):
-    #         if (family_mapping, category_id) not in sequence_dict:
-    #             sequence_dict[(family_mapping, category_id)] = num
-    #         new_arrivals_combined.loc[num, 'Map Order'] = sequence_dict[(family_mapping, category_id)]
-    #     else:
-    #         new_arrivals_combined.loc[num, 'Map Order'] = num
-        
-    # new_arrivals_combined.sort_values('Map Order', inplace=True)
 
     # Add Cat Rank column using Category ID, rank is based on the number of unique categories
     cat_ranks = {category: rank + 1 for rank, category in enumerate(new_arrivals_combined['Category ID'].unique())}
@@ -739,60 +647,23 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
 
     new_arrivals_combined['MOD Rank'] = new_arrivals_combined.apply(mod_rank, axis=1)
 
-    # # Add Sequence column
-    # last_category_id = None
-    # family_map_sequence = {}
-    # seq_counter = 0
-    # seq_list = []
-
-    # # Loop through each row in new_arrivals_combined dataframe to add sequence number
-    # for _, row in new_arrivals_combined.iterrows():
-
-    #     # If row has a different category to the previous row, reset seq_counter to 1
-    #     if row['Category ID'] != last_category_id:
-    #         seq_counter = 1
-    #         last_category_id = row['Category ID']
-
-    #     # If row has same category to the previous row, but MOD rank goes back to 1 meaning the start of a new sequence, increase seq_counter
-    #     # Mod ranking will be 1,2,3,...,0
-    #     elif row['MOD Rank'] == 1:
-    #         if row['Family Mapping'] not in family_map_sequence:
-    #             seq_counter += 1
-    #         else:
-    #             seq_list.append(family_map_sequence[row['Family Mapping']])
-    #             seq_counter += 1
-    #             continue
-
-    #     family_map_sequence[row['Family Mapping']] = seq_counter
-    #     seq_list.append(seq_counter)
-
-    # new_arrivals_combined['Sequence'] = seq_list
-    #print(new_arrivals_combined)
-
     # Sort by Sequence, Individual Cat Rank, Cat Rank, Mod Rank
     new_arrivals_combined_sorted = new_arrivals_combined.sort_values(['Cat Rank', 'Individual Cat Rank', 
-                                                                      'MOD Rank', 'Values', 'Catalog ID', 'Category ID'], 
-                                                                      ascending=[True, True, True, 
-                                                                                 False, False, False, False])
+                                                                        'MOD Rank', 'Values', 'Catalog ID', 'Category ID'], 
+                                                                        ascending=[True, True, 
+                                                                                    False, False, False, False])
                                                                 
-    new_arrivals_combined_sorted = new_arrivals_combined_sorted.drop(columns=['Cat Rank', 'Individual Cat Rank', 'MOD Rank', 'Map Order'])
+    new_arrivals_combined_sorted = new_arrivals_combined_sorted.drop(columns=['Cat Rank', 'Individual Cat Rank', 'MOD Rank'])
     new_arrivals_combined_sorted['Category ID'] = 'newarrivals'
     new_arrivals_combined_sorted.reset_index(drop=True, inplace=True)
 
-    #sorted_folder = "Output"
-    #month, day = datetime.now().strftime("%m"), datetime.now().strftime("%d")
-    #all_categories_filename = f"PreCSVWorking_{year}{month}{day}_{countrytype}_01_eugene_check.xlsx"
-
-    #all_categories_file_path = os.path.join(root_folder_path, country, sorted_folder, all_categories_filename)
-    #new_arrivals_combined_sorted.to_excel(all_categories_file_path, index=False)
-
     # All sorted dataframes
     all_categories_sorted = pd.concat([gs_sorted_df, shoes_sorted_df, bags_sorted_df, 
-                                       sg_sorted_df, j_sorted_df, acc_sorted_df], axis=0, ignore_index=True)
+                                        sg_sorted_df, j_sorted_df, acc_sorted_df], axis=0, ignore_index=True)
 
     # Add New Arrivals to sorted dataframes, final output will have new arrivals as separate section
     final_sorted = pd.concat([all_categories_sorted, new_arrivals_combined_sorted], axis=0, ignore_index=True)
-    
+
     # Lookup Product ID using country
     split_string = "-" + ref_dfs['PID_ref'].loc[ref_dfs['PID_ref']["Country"] == country, "PID"].values[0]
 
@@ -812,90 +683,83 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
     final_sorted.rename(columns={"Final Category ID": "Category ID"}, inplace=True)
     final_sorted = final_sorted[["Product ID", "Category ID", "Catalog ID", "Values", "Article", "Photo"]]
 
-    # Split into various sheets by Category ID
-    # sorted_folder = "Output"
-    month, day = datetime.now().strftime("%m"), datetime.now().strftime("%d")
-    all_categories_filename = f"PreCSVWorking_{year}{month}{day}_{countrytype}_01.xlsx"
+    return final_sorted
+    # # Load the existing Excel file
+    # existing_workbook = load_workbook(all_categories_file_path)
+    # existing_worksheet = existing_workbook.active
+    # worksheet_df = pd.DataFrame(existing_worksheet.values)
+    # worksheet_df.columns = worksheet_df.iloc[0]     # Dataframe column names are taken from first row
+    # worksheet_df = worksheet_df[1:]                 # Data from the other rows of the dataframe 
 
-    # all_categories_file_path = os.path.join(root_folder_path, country, sorted_folder, all_categories_filename)
-    # final_sorted.to_excel(all_categories_file_path, index=False)
-    
-    # Load the existing Excel file
-    existing_workbook = load_workbook(all_categories_file_path)
-    existing_worksheet = existing_workbook.active
-    worksheet_df = pd.DataFrame(existing_worksheet.values)
-    worksheet_df.columns = worksheet_df.iloc[0]     # Dataframe column names are taken from first row
-    worksheet_df = worksheet_df[1:]                 # Data from the other rows of the dataframe 
+    # # Loop through the rows of the DataFrame and split the data into sheets based on the 'Category ID' values
+    # sheets = {}
+    # for _, row in worksheet_df.iterrows():
+    #     category_id = row['Category ID']
+    #     if category_id not in sheets:
+    #         sheets[category_id] = pd.DataFrame(columns=worksheet_df.columns)
+    #     sheets[category_id] = pd.concat([sheets[category_id], row.to_frame().T])
 
-    # Loop through the rows of the DataFrame and split the data into sheets based on the 'Category ID' values
-    sheets = {}
-    for _, row in worksheet_df.iterrows():
-        category_id = row['Category ID']
-        if category_id not in sheets:
-            sheets[category_id] = pd.DataFrame(columns=worksheet_df.columns)
-        sheets[category_id] = pd.concat([sheets[category_id], row.to_frame().T])
+    # # Create a new workbook object for the output file
+    # output_workbook = Workbook()
 
-    # Create a new workbook object for the output file
-    output_workbook = Workbook()
+    # # Loop through the sheets and add them to the output workbook
+    # for category_id, sheet_df in sheets.items():
+    #     sheet_df.drop_duplicates(subset=['Article'], keep='first', inplace=True)
+    #     output_worksheet = output_workbook.create_sheet(category_id)
+    #     row_index = 0
 
-    # Loop through the sheets and add them to the output workbook
-    for category_id, sheet_df in sheets.items():
-        sheet_df.drop_duplicates(subset=['Article'], keep='first', inplace=True)
-        output_worksheet = output_workbook.create_sheet(category_id)
-        row_index = 0
+    #     # Loop through each row in the sheet DataFrame
+    #     for index, row in sheet_df.iterrows():
+    #         article_number = row['Article']
+    #         directory = 'https://images.e-charleskeith.com/Article/'
+    #         image_path = directory + str(article_number) + '.jpg'
 
-        # Loop through each row in the sheet DataFrame
-        for index, row in sheet_df.iterrows():
-            article_number = row['Article']
-            directory = 'https://images.e-charleskeith.com/Article/'
-            image_path = directory + str(article_number) + '.jpg'
+    #         try: 
+    #             response = requests.get(image_path, verify=False, timeout = (30, 30))
 
-            try: 
-                response = requests.get(image_path, verify=False, timeout = (30, 30))
+    #             if response.status_code == 200: 
+    #                 pil_image = PILImage.open(BytesIO(response.content))
+    #                 image_width, image_height = pil_image.size
 
-                if response.status_code == 200: 
-                    pil_image = PILImage.open(BytesIO(response.content))
-                    image_width, image_height = pil_image.size
+    #                 if image_height > image_width:
+    #                     pil_image = pil_image.rotate(90)
 
-                    if image_height > image_width:
-                        pil_image = pil_image.rotate(90)
-
-                    # Convert PIL image back to bytes
-                    image_bytes = BytesIO()
-                    rgb_img = pil_image.convert('RGB')
-                    rgb_img.save(image_bytes, format='JPEG')
-                    image_bytes.seek(0)
+    #                 # Convert PIL image back to bytes
+    #                 image_bytes = BytesIO()
+    #                 rgb_img = pil_image.convert('RGB')
+    #                 rgb_img.save(image_bytes, format='JPEG')
+    #                 image_bytes.seek(0)
                     
-                    img = Image(image_bytes)
+    #                 img = Image(image_bytes)
                     
-                    column_width = 2.0 / 2.54 * 160
-                    row_height = 3.0 / 2.54 * 64
+    #                 column_width = 2.0 / 2.54 * 160
+    #                 row_height = 3.0 / 2.54 * 64
 
-                    img.width = int(column_width)
-                    img.height = int(row_height)
+    #                 img.width = int(column_width)
+    #                 img.height = int(row_height)
 
-                    cell = 'F{}'.format(row_index + 2)
-                    output_worksheet.add_image(img, cell)
+    #                 cell = 'F{}'.format(row_index + 2)
+    #                 output_worksheet.add_image(img, cell)
 
-            except requests.Timeout:
-                print(f"The request timed out for article {article_number}")
-                continue
-            except requests.RequestException as e:
-                print(f"An error occurred for article {article_number}: {e}")
-                continue
+    #         except requests.Timeout:
+    #             print(f"The request timed out for article {article_number}")
+    #             continue
+    #         except requests.RequestException as e:
+    #             print(f"An error occurred for article {article_number}: {e}")
+    #             continue
             
-            row_index += 1
+    #         row_index += 1
 
-        for i in range(1, sheet_df.shape[0] + 2):
-            output_worksheet.row_dimensions[i].height = 59.5
-            for col in ['E', 'F']:
-                output_worksheet.column_dimensions[col].width = 18
+    #     for i in range(1, sheet_df.shape[0] + 2):
+    #         output_worksheet.row_dimensions[i].height = 59.5
+    #         for col in ['E', 'F']:
+    #             output_worksheet.column_dimensions[col].width = 18
 
-        data = sheet_df.values.tolist()
-        output_worksheet.append(sheet_df.columns.tolist())
-        for row in data:
-            output_worksheet.append(row)
+    #     data = sheet_df.values.tolist()
+    #     output_worksheet.append(sheet_df.columns.tolist())
+    #     for row in data:
+    #         output_worksheet.append(row)
 
-    output_workbook.remove(output_workbook['Sheet'])     # Remove 'sheet' from excel file
+    # output_workbook.remove(output_workbook['Sheet'])     # Remove 'sheet' from excel file
 
-    return dcc.send_data_frame(df.to_excel, "mydf.xlsx", sheet_name="Sheet_name_1")
+    # return dcc.send_data_frame(df.to_excel, "mydf.xlsx", sheet_name="Sheet_name_1")
