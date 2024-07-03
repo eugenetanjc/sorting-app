@@ -192,31 +192,30 @@ def sorting_layout():
 def compile_layout():
     st.header("Compilation")
 
-    # Select Country folder to save .csv file into
-    st.subheader("Select Country folder to save .csv file into:")
-    country_input = st.selectbox("Select a country for compile input", options=[opt['value'] for opt in country_options])
+    # # Select Country folder to save .csv file into
+    # st.subheader("Select Country folder to save .csv file into:")
+    # country_input = st.selectbox("Select a country for compile input", options=[opt['value'] for opt in country_options])
 
-    # Select country type for your .csv file extension
-    st.subheader("Select country type for your .csv file extension:")
-    countrytype_input = st.selectbox("Select a country type for compile input", options=[opt['value'] for opt in countrytype_options])
+    # # Select country type for your .csv file extension
+    # st.subheader("Select country type for your .csv file extension:")
+    # countrytype_input = st.selectbox("Select a country type for compile input", options=[opt['value'] for opt in countrytype_options])
 
     # Input your working file
     st.subheader("Input your working file (should be a .xlsx file) into the area below for compile:")
-    uploaded_files = st.file_uploader("Drag and Drop or Select .xlsx working file (it can take 10-15 seconds to load)", type=["xlsx"], accept_multiple_files=True)
+    uploaded_file = st.file_uploader("Drag and Drop or Select .xlsx working file", type=["xlsx"])
+    if uploaded_file:
+        st.write("File uploaded!")
 
     # Compile button
     if st.button("Compile working file"):
-        if uploaded_files:
+        if uploaded_file:
             st.write("Compiling working file...")
 
-            combined_df = pd.DataFrame()
-
-            for uploaded_file in uploaded_files:
-                # Load the workbook 
-                workbook = openpyxl.load_workbook(uploaded_file)
-                dfs = [pd.read_excel(BytesIO(uploaded_file.getvalue()), sheet_name=sheet_name, usecols="A:D", engine='openpyxl') for sheet_name in workbook.sheetnames]
-                combined_df = pd.concat([combined_df, pd.concat(dfs, ignore_index=True)], ignore_index=True)
-                
+            # Load the workbook 
+            workbook = openpyxl.load_workbook(uploaded_file)
+            dfs = [pd.read_excel(BytesIO(uploaded_file.getvalue()), sheet_name=sheet_name, usecols="A:D", engine='openpyxl') for sheet_name in workbook.sheetnames]
+            combined_df = pd.concat(dfs, ignore_index=True)
+            
             csv = combined_df.to_csv(index=False)
             b64 = base64.b64encode(csv.encode()).decode()  # Encode as base64
             href = f'<a href="data:file/csv;base64,{b64}" download="compiled_file.csv">Download CSV file</a>'
