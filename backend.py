@@ -2,18 +2,18 @@
 import pandas as pd
 import numpy as np
 import os
-import requests
-from io import BytesIO
-from datetime import datetime
+# import requests
+# from io import BytesIO
+from datetime import datetime, timedelta
 import psycopg2
-import xlsxwriter
-from openpyxl import Workbook
-from openpyxl.drawing.image import Image
-from openpyxl import load_workbook
+# import xlsxwriter
+# from openpyxl import Workbook
+# from openpyxl.drawing.image import Image
+# from openpyxl import load_workbook
 import warnings
 warnings.filterwarnings("ignore")
-from PIL import Image as PILImage
-from dash import dcc
+# from PIL import Image as PILImage
+# from dash import dcc
 
 def sorting(s_country, year, s_week, s_ctype, params_dict):
 
@@ -25,6 +25,16 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
 
     for var in [country, year, week, countrytype]:    
         print(var, type(var))
+
+    # Get date related information
+    current_date = datetime.now()
+    current_week_number = current_date.isocalendar()[1]
+    current_season_number = current_week_number // 13
+
+    current_year = str(current_date.year)
+    season_start_month = f"{(current_season_number * 3 + 1):02d}"
+
+    start_of_week = (current_date - timedelta(days=current_date.weekday())).strftime("%Y-%m-%d")
 
     # Reading key size check parameters from Parameters worksheet
     param_df = params_dict['Parameters'].iloc[:, 0:2]
@@ -249,6 +259,60 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
     "SID_ref": {"sheet_name": "stageid", "columns": slice(0,2), "names": ["Class", "SID"]}
     }
 
+    # Get list of seasonal articles
+    seasonal_article_tuple = tuple(processing_df[processing_df['Stock Type']=='3 SEASONAL']['Article'])
+
+    conn = psycopg2.connect(**params)
+
+    # Use ecom sales datatable for all other countries
+    query = f'''
+    SELECT articleno as article, SUM(soldqty) as total_sold_qty_seasonal
+    FROM ads.ads_ckg_ecom_salesfact 
+    WHERE articleno IN {seasonal_article_tuple}
+    GROUP BY articleno
+    ORDER BY total_sold_qty_seasonal DESC
+    '''
+        
+    seasonal_sales = pd.read_sql(query, conn).dropna().copy()
+    conn.close()
+
+    seasonal_sales.columns = seasonal_sales.columns.str.capitalize()
+
+    conn = psycopg2.connect(**params)
+
+    # Use ecom sales datatable for all other countries
+    query = f'''SELECT articleno as article, SUM(soldqty) as total_sold_qty_weekly
+            FROM ads.ads_ckg_ecom_salesfact 
+            WHERE (articleno SIMILAR TO 'CK[0-9]%' OR articleno SIMILAR TO 'SL[0-9]%')
+            AND date >= '{start_of_week}'
+            GROUP BY articleno
+            ORDER BY total_sold_qty_weekly DESC
+            '''
+        
+    weekly_sales = pd.read_sql(query, conn).dropna().copy()
+    conn.close()
+
+    # Capitalize the column names
+    weekly_sales.columns = weekly_sales.columns.str.capitalize()
+
+    conn = psycopg2.connect(**params)
+
+    # Use ecom sales datatable for all other countries
+    query = f'''
+    SELECT DISTINCT article, sku_product_name FROM dim.item_master 
+    WHERE (sku_product_name = 'GABINE' OR sku_product_name = 'KOA' OR sku_product_name = 'CHARLOT' OR sku_product_name = 'PERLINE' OR sku_product_name = 'PETRA' OR sku_product_name = 'TONI')
+    '''
+        
+    product_names = pd.read_sql(query, conn).dropna().copy()
+    conn.close()
+
+    gabine_articles = product_names[product_names['sku_product_name']=='GABINE']['article'].to_list()
+    koa_articles = product_names[product_names['sku_product_name']=='KOA']['article'].to_list()
+    perline_articles = product_names[product_names['sku_product_name']=='PERLINE']['article'].to_list()
+    charlot_articles = product_names[product_names['sku_product_name']=='CHARLOT']['article'].to_list()
+    petra_articles = product_names[product_names['sku_product_name']=='PETRA']['article'].to_list()
+    toni_articles = product_names[product_names['sku_product_name']=='TONI']['article'].to_list()
+
     # The sheets are saved into a dictionary
     ref_dfs = {}
     for ref_name, ref_info in ref_sheets.items():
@@ -272,6 +336,21 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
         # Filtering for products by category
         selected_category = processing_df[processing_df['Article'].str.contains(article_prefix)]
 
+        # Whether articles are in these special categories
+        selected_category['Gabine'] =  selected_category['Article'].isin(gabine_articles)
+        selected_category['Koa'] =  selected_category['Article'].isin(koa_articles)
+        selected_category['Charlot'] =  selected_category['Article'].isin(charlot_articles)
+        selected_category['Perline'] =  selected_category['Article'].isin(perline_articles)
+        selected_category['Petra'] =  selected_category['Article'].isin(petra_articles)
+        selected_category['Toni'] =  selected_category['Article'].isin(toni_articles)
+
+        # Get best sellers by week and by season
+        selected_category_copy = selected_category.copy()
+        selected_category_seasonal_best = pd.merge(selected_category_copy, seasonal_sales, on='Article', how='left').sort_values(['Total_sold_qty_seasonal'], ascending=False).head(10)
+        selected_category['Best Seller Seasonal'] =  selected_category['Article'].isin(selected_category_seasonal_best['Article'])
+        selected_category_weekly_best = pd.merge(selected_category_copy, weekly_sales, on='Article', how='left').sort_values(['Total_sold_qty_weekly'], ascending=False).head(10)
+        selected_category['Best Seller Weekly'] =  selected_category['Article'].isin(selected_category_weekly_best['Article'])
+
         # Summing SOH by Theme for sorting purposes later
         SOHbyTheme_df = selected_category.groupby(['Theme'],as_index=False).agg({'SOH': 'sum'})
         SOHbyTheme_df.rename(columns={'SOH':'SOH By Theme'},inplace=True)
@@ -286,12 +365,22 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
             products_sorting = products_sorting.merge(core_ref, on = "Article", how = "left")
 
         # Initial sorting using the columns added thus far
-        sorted_products = products_sorting.sort_values(['Marketing', 'New Arrival', 'Repeat', 'Key Size Check', 
+        sorted_products = products_sorting.sort_values(['Marketing', 'New Arrival', 'Gabine', 'Koa', 
+                                                        'Best Seller Seasonal', 'Best Seller Weekly', 
+                                                        'Charlot', 'Perline', 'Petra', 'Toni', 
+                                                        'Repeat', 'Key Size Check', 
                                                         'Colour', 'Weeks Launched','Stock Type','SOH By Theme', 'SOH'], 
                                                         ascending=[False, False, False, False,
-                                                                    False, True, False, False, False])
+                                                                False, False, 
+                                                                False, False, False, False,
+                                                                False, False,
+                                                                False, True, False, False, False])
         
-        sorted_products = sorted_products.reindex(columns=['Article', 'Marketing', 'New Arrival', 'Repeat', 
+        sorted_products = sorted_products.reindex(columns=['Article', 'Marketing', 'New Arrival',
+                                                        'Gabine', 'Koa', 
+                                                            'Best Seller Seasonal', 'Best Seller Weekly', 
+                                                            'Charlot', 'Perline', 'Petra', 'Toni',  
+                                                            'Repeat', 
                                                             'Core Group', 'Key Size Check',
                                                             'Colour','Weeks Launched', 'Stock Type', 'Seasonal Focus',
                                                             'SOH', 'Class', 'Sub Class', 'Theme', 'Season', 'Category',
