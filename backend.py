@@ -147,21 +147,21 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
     if country in ['SAUDI ARABIA', 'VIETNAM', 'THAILAND', 'INDONESIA', 'INDIA']:
         # Use ecom sales datatable for sf2 countries
         query = "SELECT distinct t1.article as article, \
-                (t1.total_discount_amount_on_item / NULLIF(t1.total_net_price, 0)) * 100 AS markdown_percent, \
-                t3.min_article_launch_yr, t3.min_article_launch_wk \
-                FROM ads.ads_ecom_sf2_sales_hi as t1 \
-                INNER JOIN ( \
-                    SELECT article, country, MAX(DATE(order_ts)) as max_date from ads.ads_ecom_sf2_sales_hi \
-                    GROUP BY article, country \
-                ) AS t2 \
-                ON t1.article = t2.article and t1.country = t2.country and DATE(t1.order_ts) = t2.max_date \
-                INNER JOIN( \
-                    SELECT article, country, MIN(article_launch_yr) AS min_article_launch_yr, MIN(article_launch_wk) AS min_article_launch_wk \
-                    FROM ads.ads_ckg_stock_type_di \
-                    GROUP BY article, country \
-                ) AS t3 \
-                ON t2.article = t3.article and t2.country = t3.country \
-                WHERE t1.shopno = 'ECOM' and t1.country = %s"
+            (t1.total_discount_amount_on_item / NULLIF(t1.total_net_price, 0)) * 100 AS markdown_percent, \
+            t3.min_article_launch_yr, t3.min_article_launch_wk \
+            FROM ads.ads_ecom_sf2_sales_hi as t1 \
+            INNER JOIN ( \
+                SELECT article, country, MAX(DATE(order_ts)) as max_date from ads.ads_ecom_sf2_sales_hi \
+                GROUP BY article, country \
+            ) AS t2 \
+            ON t1.article = t2.article and t1.country = t2.country and DATE(t1.order_ts) = t2.max_date \
+            INNER JOIN( \
+                SELECT article, country, MIN(article_launch_yr) AS min_article_launch_yr, MIN(article_launch_wk) AS min_article_launch_wk \
+                FROM ads.ads_ckg_stock_type_di \
+                GROUP BY article, country \
+            ) AS t3 \
+            ON t2.article = t3.article and t2.country = t3.country \
+            WHERE t1.country = %s"
 
     else: 
         # Use ecom sales datatable for all other countries
