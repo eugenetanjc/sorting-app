@@ -43,7 +43,7 @@ def peform_sorting(s_country, s_year, s_week, s_ctype, params_dict):
 
     # Run sorting function
     output_df = backend.sorting(s_country, s_year, s_week, s_ctype, params_dict)
-    st.success("Sorting performed successfully! Adding photos...")
+    # st.success("Sorting performed successfully! Adding photos...")
     return output_df
 
 def compile_file(filename, country, ctype):
@@ -212,8 +212,8 @@ def sorting_layout():
         st.write("Sorting is being executed...")
         outcome = peform_sorting(country, year, week, country_type, params_dict)
         st.session_state['outcome'] = outcome
-        st.markdown(get_csv_download_link(st.session_state['outcome']), unsafe_allow_html=True)
-        st.success("File is ready for download!")
+        st.markdown(get_csv_download_link(st.session_state['outcome'], f"Output_{country}_W{week}_Y{year}_{country_type}"), unsafe_allow_html=True)
+        st.success("Sorting completed, file is ready for download!")
 
 # Define the Streamlit app layout for the Compilation tab
 def compile_layout():
