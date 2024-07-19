@@ -43,18 +43,7 @@ def peform_sorting(s_country, s_year, s_week, s_ctype, params_dict):
 
     # Run sorting function
     output_df = backend.sorting(s_country, s_year, s_week, s_ctype, params_dict)
-    # st.success("Sorting performed successfully! Adding photos...")
     return output_df
-
-def compile_file(filename, country, ctype):
-    if not filename:
-        st.error("Please upload a file.")
-
-    if not all([country, ctype]):
-        st.error("Please fill in all required fields.")
-        
-    compiled_file_path = compile.compiling(country, ctype)
-    st.success("Compiling performed successfully!")
 
 # Function to create a downloadable link for CSV file
 def get_csv_download_link(df, filename="sorted_data.xlsx"):
@@ -74,54 +63,6 @@ def get_csv_download_link(df, filename="sorted_data.xlsx"):
     for category_id, sheet_df in sheets.items():
         sheet_df.drop_duplicates(subset=['Article'], keep='first', inplace=True)
         output_worksheet = output_workbook.create_sheet(category_id)
-        row_index = 0
-
-        # # Loop through each row in the sheet DataFrame
-        # for index, row in sheet_df.iterrows():
-        #     article_number = row['Article']
-        #     directory = 'https://images.e-charleskeith.com/Article/'
-        #     image_path = directory + str(article_number) + '.jpg'
-
-        #     try: 
-        #         response = requests.get(image_path, verify=False, timeout = (30, 30))
-
-        #         if response.status_code == 200: 
-        #             pil_image = PILImage.open(BytesIO(response.content))
-        #             image_width, image_height = pil_image.size
-
-        #             if image_height > image_width:
-        #                 pil_image = pil_image.rotate(90)
-
-        #             # Convert PIL image back to bytes
-        #             image_bytes = BytesIO()
-        #             rgb_img = pil_image.convert('RGB')
-        #             rgb_img.save(image_bytes, format='JPEG')
-        #             image_bytes.seek(0)
-                    
-        #             img = Image(image_bytes)
-                    
-        #             column_width = 2.0 / 2.54 * 160
-        #             row_height = 3.0 / 2.54 * 64
-
-        #             img.width = int(column_width)
-        #             img.height = int(row_height)
-
-        #             cell = 'F{}'.format(row_index + 2)
-        #             output_worksheet.add_image(img, cell)
-
-        #     except requests.Timeout:
-        #         print(f"The request timed out for article {article_number}")
-        #         continue
-        #     except requests.RequestException as e:
-        #         print(f"An error occurred for article {article_number}: {e}")
-        #         continue
-            
-        #     row_index += 1
-
-        # for i in range(1, sheet_df.shape[0] + 2):
-        #     output_worksheet.row_dimensions[i].height = 59.5
-        #     for col in ['E', 'F']:
-        #         output_worksheet.column_dimensions[col].width = 18
 
         # Append column headers
         output_worksheet.append(sheet_df.columns.tolist())
@@ -217,15 +158,20 @@ def sorting_layout():
 
 # Define the Streamlit app layout for the Compilation tab
 def compile_layout():
+
+    st.markdown(
+    f'<div style="text-align: center; margin: 10px;">'
+    f'<div><img src="data:image/png;base64,{encoded_image}" style="height: 40%; width: 40%;"/></div>'
+    f'<br/>'
+    f'<div style="text-align: center; margin-bottom: 15px; display: inline-block; font-family: Bahnschrift; font-weight: bold;">'
+    f'<h1>ECOM Sorting App</h1>'
+    f'</div>'
+    f'</div>',
+    unsafe_allow_html=True
+    )
+    st.markdown('<hr>', unsafe_allow_html=True)
+
     st.header("Compilation")
-
-    # # Select Country folder to save .csv file into
-    # st.subheader("Select Country folder to save .csv file into:")
-    # country_input = st.selectbox("Select a country for compile input", options=[opt['value'] for opt in country_options])
-
-    # # Select country type for your .csv file extension
-    # st.subheader("Select country type for your .csv file extension:")
-    # countrytype_input = st.selectbox("Select a country type for compile input", options=[opt['value'] for opt in countrytype_options])
 
     # Input your working file
     st.subheader("Input your working file (should be a .xlsx file) into the area below for compile:")
@@ -243,10 +189,47 @@ def compile_layout():
             dfs = [pd.read_excel(BytesIO(uploaded_file.getvalue()), sheet_name=sheet_name, usecols="A:D", engine='openpyxl') for sheet_name in workbook.sheetnames]
             combined_df = pd.concat(dfs, ignore_index=True)
             
-            csv = combined_df.to_csv(index=False)
-            b64 = base64.b64encode(csv.encode()).decode()  # Encode as base64
-            href = f'<a href="data:file/csv;base64,{b64}" download="compiled_file.csv">Download CSV file</a>'
-            st.markdown(href, unsafe_allow_html=True)
+            # Define the maximum number of rows per file
+            max_rows_per_file = 2000
+
+            # Group by the category column (replace 'category' with the actual category column name)
+            df_grouped = combined_df.groupby('category')
+
+            # List to store chunks
+            chunks = []
+            current_chunk = pd.DataFrame()
+
+            for _, group in df_grouped:
+                # If adding this group exceeds the max_rows_per_file, store the current chunk and start a new one
+                if len(current_chunk) + len(group) > max_rows_per_file:
+                    chunks.append(current_chunk)
+                    current_chunk = pd.DataFrame()
+                
+                # Add the group to the current chunk
+                current_chunk = pd.concat([current_chunk, group], ignore_index=True)
+
+            # Add the last chunk if it's not empty
+            if not current_chunk.empty:
+                chunks.append(current_chunk)
+
+            # Create download links for each chunk
+            for i, chunk in enumerate(chunks):
+                # Convert the chunk to a CSV string
+                csv = chunk.to_csv(index=False)
+
+                # Encode the CSV string as base64
+                b64 = base64.b64encode(csv.encode()).decode()
+
+                # Create a download link for the chunk
+                href = f'<a href="data:file/csv;base64,{b64}" download="compiled_file_part_{i+1}.csv">Download CSV file part {i+1}</a>'
+
+                # Display the download link in Streamlit
+                st.markdown(href, unsafe_allow_html=True)
+
+            # csv = combined_df.to_csv(index=False)
+            # b64 = base64.b64encode(csv.encode()).decode()  # Encode as base64
+            # href = f'<a href="data:file/csv;base64,{b64}" download="compiled_file.csv">Download CSV file</a>'
+            # st.markdown(href, unsafe_allow_html=True)
             
             st.success("Compilation complete!")
         else:

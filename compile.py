@@ -23,5 +23,3 @@ def compiling(working_output_path, country, countrytype, user):
     # Save the output CSV file
     combined_df.to_csv(final_output_path, index=False)
     print('Compiling complete')
-
-    return final_output_path
