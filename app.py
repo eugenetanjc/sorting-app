@@ -201,7 +201,7 @@ def compile_layout():
 
             for _, group in df_grouped:
                 # If adding this group exceeds the max_rows_per_file, store the current chunk and start a new one
-                if len(current_chunk) + len(group) > max_rows_per_file:
+                if len(current_chunk) + len(group) > max_rows_per_file - 1:
                     chunks.append(current_chunk)
                     current_chunk = pd.DataFrame()
                 
@@ -221,15 +221,10 @@ def compile_layout():
                 b64 = base64.b64encode(csv.encode()).decode()
 
                 # Create a download link for the chunk
-                href = f'<a href="data:file/csv;base64,{b64}" download="compiled_file_part_{i+1}.csv">Download CSV file part {i+1}</a>'
+                href = f'<a href="data:file/csv;base64,{b64}" download="Compiled_File_Part_{i+1}.csv">Download CSV file Part {i+1}</a>'
 
                 # Display the download link in Streamlit
                 st.markdown(href, unsafe_allow_html=True)
-
-            # csv = combined_df.to_csv(index=False)
-            # b64 = base64.b64encode(csv.encode()).decode()  # Encode as base64
-            # href = f'<a href="data:file/csv;base64,{b64}" download="compiled_file.csv">Download CSV file</a>'
-            # st.markdown(href, unsafe_allow_html=True)
             
             st.success("Compilation complete!")
         else:
