@@ -193,7 +193,7 @@ def compile_layout():
             max_rows_per_file = 2000
 
             # Group by the category column (replace 'category' with the actual category column name)
-            df_grouped = combined_df.groupby('Category ID')
+            df_grouped = combined_df.groupby('Category ID', sort=False)
 
             # List to store chunks
             chunks = []
