@@ -220,8 +220,11 @@ def compile_layout():
                 # Encode the CSV string as base64
                 b64 = base64.b64encode(csv.encode()).decode()
 
+                # Get the current date and format it as a string without dashes
+                formatted_date = datetime.now().strftime("%Y%m%d")
+
                 # Create a download link for the chunk
-                href = f'<a href="data:file/csv;base64,{b64}" download="Compiled_File_Part_{i+1}.csv">Download CSV file Part {i+1}</a>'
+                href = f'<a href="data:file/csv;base64,{b64}" download="categoryposition_{formatted_date}_{i+1:02}.csv">Download CSV file Part {i+1}</a>'
 
                 # Display the download link in Streamlit
                 st.markdown(href, unsafe_allow_html=True)
