@@ -67,7 +67,7 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
     key_sizes_df.columns = ['Size', 'Key Size']
 
     # Reading SOH info from SOH worksheet
-    soh_df = params_dict["SOH"].iloc[1:, 0:4]
+    soh_df = params_dict["SOH"].iloc[0:, 0:4]
     soh_df.columns = ["Article","SOH","Colour","Size"]
     
     # Using key size info and SOH info to perform KeySizeCheck Filtering
@@ -221,7 +221,7 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
     processing_df = processing_df.merge(discount_df, on = "Article", how='left')
 
     # Reading New Arrivals info from worksheet
-    new_arrivals = params_dict["New Arrivals"].iloc[1:, 0:2]
+    new_arrivals = params_dict["New Arrivals"].iloc[0:, 0:2]
     new_arrivals.columns = ['Week', 'Article']
     new_arrivals = new_arrivals[new_arrivals['Week'] >= week-2]     # takes last 3 weeks of new arrivals
     processing_df['New Arrival'] = processing_df['Article'].isin(new_arrivals['Article'])
@@ -243,7 +243,7 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
     processing_df = processing_df.drop_duplicates(subset=['Article'])
 
     # Reading Repeats info from worksheet
-    repeats = params_dict["Repeats"].iloc[1:, 0:2]
+    repeats = params_dict["Repeats"].iloc[0:, 0:2]
     repeats.columns = ['Week', 'Article']
     repeats = repeats[repeats['Week'] >= week-2]
     processing_df['Repeat'] = processing_df['Article'].isin(repeats['Article'])
@@ -316,7 +316,7 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
     # The sheets are saved into a dictionary
     ref_dfs = {}
     for ref_name, ref_info in ref_sheets.items():
-        df = params_dict[ref_info["sheet_name"]].iloc[1:, ref_info["columns"]]
+        df = params_dict[ref_info["sheet_name"]].iloc[0:, ref_info["columns"]]
         df.columns = ref_info['names']
         ref_dfs[ref_name] = df
 
