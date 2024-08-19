@@ -150,12 +150,6 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
 
     # Appending marketing list onto the Rough Working List
     processing_df['Marketing'] = processing_df['Article'].isin(marketing_items['Article'])
-
-    # Reading Family Mapping file for each product category
-    FamilyGrouping_ref = params_dict["DAT13 Core List Tracker (3)"].iloc[:, 1:3]
-
-    # Appending family grouping onto the Rough Working List
-    processing_df = processing_df.merge(FamilyGrouping_ref, on = "Article", how='left')
     
     # Reading discount info from datatable
     conn = psycopg2.connect(**params)
@@ -358,11 +352,6 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
         selected_category_weekly_best = pd.merge(selected_category_copy, weekly_sales, on='Article', how='left').sort_values(['Total_sold_qty_weekly'], ascending=False).head(10)
         selected_category['Best Seller Weekly'] =  selected_category['Article'].isin(selected_category_weekly_best['Article'])
 
-        # Getting minimum weeks launched for each family map grouping 
-        GroupMinWeeks_df = selected_category.groupby(['Family Mapping'],as_index=False).agg({'Weeks Launched': 'min'})
-        GroupMinWeeks_df.rename(columns={'Weeks Launched':'Group Min Weeks'},inplace=True)
-        products_sorting = selected_category.merge(GroupMinWeeks_df, on = "Family Mapping", how='left')
-
         # Summing SOH by Theme for sorting purposes later
         SOHbyTheme_df = selected_category.groupby(['Theme'],as_index=False).agg({'SOH': 'sum'})
         SOHbyTheme_df.rename(columns={'SOH':'SOH By Theme'},inplace=True)
@@ -388,11 +377,12 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
                                                                 False, False,
                                                                 False, True, False, False, False])
         
-        sorted_products = sorted_products.reindex(columns=['Article', 'Marketing', 'New Arrival', 'Gabine', 'Koa', 
+        sorted_products = sorted_products.reindex(columns=['Article', 'Marketing', 'New Arrival',
+                                                        'Gabine', 'Koa', 
                                                             'Best Seller Seasonal', 'Best Seller Weekly', 
                                                             'Charlot', 'Perline', 'Petra', 'Toni',  
                                                             'Repeat', 
-                                                            'Core Group', 'Family Mapping', 'Key Size Check',
+                                                            'Core Group', 'Key Size Check',
                                                             'Colour','Weeks Launched', 'Stock Type', 'Seasonal Focus',
                                                             'SOH', 'Class', 'Sub Class', 'Theme', 'Season', 'Category',
                                                             'Category Name', 'Size', 'First Sales Date', 'SOH By Theme'])
@@ -403,7 +393,6 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
         if product_category == 'Bags' or 'Shoes':
             output.replace('NaN', np.nan, inplace=True)
             output['Core_pos'] = output['Core Group'].fillna(0)  # Create a NaN_pos column to indicate not in core group
-            output['Map_pos'] = output['Family Mapping'].fillna(0) # Create a Map_pos column to indicate no family mapping
             output = output.reset_index(drop=True)
 
         # Adding in Product ID, Catalog ID, and Values columns
@@ -719,26 +708,6 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
                                                     axis=0, ignore_index=True))
     new_arrivals_combined = new_arrivals_combined.sort_values(['Category ID'], ascending=[True])
 
-    # Add Family Mapping column
-    all_sorted_categories = pd.concat([sorted_bags_by_groups, sorted_shoes_by_groups, sorted_sg, sorted_j, sorted_acc])
-    new_arrivals_combined = pd.merge(new_arrivals_combined, all_sorted_categories[['Product ID', 'Family Mapping']], on = 'Product ID', how = 'left')
-
-    # Add Map Order column to keep track of sequence of family mapping
-    sequence_dict = {}
-
-    for num, row in new_arrivals_combined.iterrows():
-        family_mapping = row['Family Mapping']
-        category_id = row['Category ID']
-        
-        if pd.notna(family_mapping):
-            if (family_mapping, category_id) not in sequence_dict:
-                sequence_dict[(family_mapping, category_id)] = num
-            new_arrivals_combined.loc[num, 'Map Order'] = sequence_dict[(family_mapping, category_id)]
-        else:
-            new_arrivals_combined.loc[num, 'Map Order'] = num
-        
-    new_arrivals_combined.sort_values('Map Order', inplace=True)
-
     # Add Cat Rank column using Category ID, rank is based on the number of unique categories
     cat_ranks = {category: rank + 1 for rank, category in enumerate(new_arrivals_combined['Category ID'].unique())}
     new_arrivals_combined['Cat Rank'] = new_arrivals_combined['Category ID'].map(cat_ranks)
@@ -768,43 +737,13 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
 
     new_arrivals_combined['MOD Rank'] = new_arrivals_combined.apply(mod_rank, axis=1)
 
-    # Add Sequence column
-    last_category_id = None
-    family_map_sequence = {}
-    seq_counter = 0
-    seq_list = []
-
-    # Loop through each row in new_arrivals_combined dataframe to add sequence number
-    for _, row in new_arrivals_combined.iterrows():
-
-        # If row has a different category to the previous row, reset seq_counter to 1
-        if row['Category ID'] != last_category_id:
-            seq_counter = 1
-            last_category_id = row['Category ID']
-
-        # If row has same category to the previous row, but MOD rank goes back to 1 meaning the start of a new sequence, increase seq_counter
-        # Mod ranking will be 1,2,3,...,0
-        elif row['MOD Rank'] == 1:
-            if row['Family Mapping'] not in family_map_sequence:
-                seq_counter += 1
-            else:
-                seq_list.append(family_map_sequence[row['Family Mapping']])
-                seq_counter += 1
-                continue
-
-        family_map_sequence[row['Family Mapping']] = seq_counter
-        seq_list.append(seq_counter)
-
-    new_arrivals_combined['Sequence'] = seq_list    
-
     # Sort by Sequence, Individual Cat Rank, Cat Rank, Mod Rank
-    new_arrivals_combined_sorted = new_arrivals_combined.sort_values(['Sequence', 'Cat Rank', 'Individual Cat Rank', 
-                                                                      'MOD Rank', 'Values', 'Catalog ID', 'Category ID'], 
-                                                                      ascending=[True, True, True, 
-                                                                                 False, False, False, False])
+    new_arrivals_combined_sorted = new_arrivals_combined.sort_values(['Cat Rank', 'Individual Cat Rank', 
+                                                                        'MOD Rank', 'Values', 'Catalog ID', 'Category ID'], 
+                                                                        ascending=[True, True, 
+                                                                                    False, False, False, False])
                                                                 
-    new_arrivals_combined_sorted = new_arrivals_combined_sorted.drop(columns=['Cat Rank', 'Individual Cat Rank', 'MOD Rank', 
-                                                                              'Sequence', 'Family Mapping', 'Map Order'])
+    new_arrivals_combined_sorted = new_arrivals_combined_sorted.drop(columns=['Cat Rank', 'Individual Cat Rank', 'MOD Rank'])
     new_arrivals_combined_sorted['Category ID'] = 'newarrivals'
     new_arrivals_combined_sorted.reset_index(drop=True, inplace=True)
 
