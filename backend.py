@@ -154,6 +154,11 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
     # Reading Family Mapping file for each product category
     FamilyGrouping_ref = params_dict["DAT13 Core List Tracker (3)"].iloc[:, 1:3]
 
+    list_base_articles = list(['-'.join((article.split('_')[0]).split('-')[:2]) for article in soh_df['Article'].to_list()])
+    new_grouping = pd.DataFrame({'Family Mapping': list_base_articles, 'Article': soh_df['Article'].to_list()})
+    
+    FamilyGrouping_ref = pd.concat([FamilyGrouping_ref, new_grouping], axis=0, ignore_index=True)
+
     # Appending family grouping onto the Rough Working List
     processing_df = processing_df.merge(FamilyGrouping_ref, on = "Article", how='left')
     
