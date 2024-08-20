@@ -441,8 +441,7 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
         conditions = sorted_by_groups.index[(sorted_by_groups['Marketing'] == False) & 
                                             (sorted_by_groups['New Arrival'] == False) & 
                                             (sorted_by_groups['Repeat'] == False) & 
-                                            (sorted_by_groups['Core Group'].isna()) & 
-                                            (sorted_by_groups['Family Mapping'].isna())]
+                                            (sorted_by_groups['Core Group'].isna())]
 
         no_priority = sorted_by_groups.iloc[conditions]
         priority = sorted_by_groups.drop(index=conditions)
