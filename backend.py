@@ -365,7 +365,7 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
         SOHbyTheme_df = selected_category.groupby(['Theme'],as_index=False).agg({'SOH': 'sum'})
         SOHbyTheme_df.rename(columns={'SOH':'SOH By Theme'},inplace=True)
         SOHbyTheme_df.dropna(subset=['Theme'], inplace=True)
-        products_sorting = selected_category.merge(SOHbyTheme_df, on = "Theme", how='left')
+        products_sorting = products_sorting.merge(SOHbyTheme_df, on = "Theme", how='left')
 
         # Add in products in Core Group (only for Bags and Shoes)
         if product_category in ('Bags', 'Shoes'):
@@ -378,12 +378,12 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
         sorted_products = products_sorting.sort_values(['Marketing', 'New Arrival', 'Gabine', 'Koa', 
                                                         'Best Seller Seasonal', 'Best Seller Weekly', 
                                                         'Charlot', 'Perline', 'Petra', 'Toni', 
-                                                        'Repeat', 'Core Group', 'Family Mapping', 'Key Size Check', 
+                                                        'Repeat', 'Group Min Weeks', 'Key Size Check', 
                                                         'Colour', 'Weeks Launched','Stock Type','SOH By Theme', 'SOH'], 
                                                         ascending=[False, False, False, False,
                                                                 False, False, 
                                                                 False, False, False, False,
-                                                                False, False, False, False,
+                                                                False, False, False, 
                                                                 False, True, False, False, False])
         
         # sorted_products = sorted_products.reindex(columns=['Article', 'Marketing', 'New Arrival', 'Gabine', 'Koa', 
@@ -424,7 +424,7 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
     def product_grouping(sorted_items):
 
         # Sort by columns
-        sort_columns = ['Marketing', 'New Arrival', 'Repeat', 'Family Mapping',
+        sort_columns = ['Marketing', 'New Arrival', 'Repeat', 'Group Min Weeks', 
                         'Key Size Check', 'Colour', 'Weeks Launched', 'Stock Type', 
                         'SOH By Theme', 'SOH']
         sort_order = [False, False, False, True,
@@ -441,7 +441,8 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
         conditions = sorted_by_groups.index[(sorted_by_groups['Marketing'] == False) & 
                                             (sorted_by_groups['New Arrival'] == False) & 
                                             (sorted_by_groups['Repeat'] == False) & 
-                                            (sorted_by_groups['Core Group'].isna())]
+                                            (sorted_by_groups['Core Group'].isna()) & 
+                                            (sorted_by_groups['Family Mapping'].isna())]
 
         no_priority = sorted_by_groups.iloc[conditions]
         priority = sorted_by_groups.drop(index=conditions)
