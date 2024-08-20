@@ -368,7 +368,7 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
         products_sorting = selected_category.merge(SOHbyTheme_df, on = "Theme", how='left')
 
         # Add in products in Core Group (only for Bags and Shoes)
-        if product_category == ('Bags' or 'Shoes'):
+        if product_category in ('Bags', 'Shoes'):
             core_ref = params_dict[f"{product_category}CORE"].iloc[:, 0:2]
             core_ref.columns = ["Article", "Core Group"]
             core_ref = core_ref.groupby('Article').agg('first').reset_index(names='Article')
@@ -398,7 +398,7 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
         output = sorted_products.copy()
 
         # Sorting and putting core + family mapping together
-        if product_category == 'Bags' or 'Shoes':
+        if product_category in ('Bags', 'Shoes'):
             output.replace('NaN', np.nan, inplace=True)
             output['Core_pos'] = output['Core Group'].fillna(0)  # Create a NaN_pos column to indicate not in core group
             output['Map_pos'] = output['Family Mapping'].fillna(0) # Create a Map_pos column to indicate no family mapping
