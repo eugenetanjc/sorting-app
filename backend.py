@@ -7,15 +7,6 @@ import psycopg2
 import warnings
 warnings.filterwarnings("ignore")
 
-# import requests
-# from io import BytesIO
-# import xlsxwriter
-# from openpyxl import Workbook
-# from openpyxl.drawing.image import Image
-# from openpyxl import load_workbook
-# from PIL import Image as PILImage
-# from dash import dcc
-
 def sorting(s_country, year, s_week, s_ctype, params_dict):
 
     # Processing user input
@@ -153,11 +144,13 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
 
     # Reading Family Mapping file for each product category
     FamilyGrouping_ref = params_dict["DAT13 Core List Tracker (3)"].iloc[:, 1:3]
+    FamilyGrouping_ref.rename(columns = {'Initial Article': 'Family Mapping', 'New Article': 'Article'}, inplace=True)
 
-    list_base_articles = list(['-'.join((article.split('_')[0]).split('-')[:2]) for article in soh_df['Article'].to_list()])
-    new_grouping = pd.DataFrame({'Family Mapping': list_base_articles, 'Article': soh_df['Article'].to_list()})
+    articles_to_add = list(set(soh_df[~soh_df['Article'].isin(FamilyGrouping_ref['Article'].to_list())]['Article']))
+    list_base_articles = list(['-'.join((article.split('_')[0]).split('-')[:2]) for article in articles_to_add])
+    grouping_base_articles = pd.DataFrame({'Family Mapping': list_base_articles, 'Article': articles_to_add})
     
-    FamilyGrouping_ref = pd.concat([FamilyGrouping_ref, new_grouping], axis=0, ignore_index=True)
+    FamilyGrouping_ref = pd.concat([FamilyGrouping_ref, grouping_base_articles], axis=0, ignore_index=True)
 
     # Appending family grouping onto the Rough Working List
     processing_df = processing_df.merge(FamilyGrouping_ref, on = "Article", how='left')
@@ -378,29 +371,29 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
         if product_category == ('Bags' or 'Shoes'):
             core_ref = params_dict[f"{product_category}CORE"].iloc[:, 0:2]
             core_ref.columns = ["Article", "Core Group"]
-            
+            core_ref = core_ref.groupby('Article').agg('first').reset_index(names='Article')
             products_sorting = products_sorting.merge(core_ref, on = "Article", how = "left")
 
         # Initial sorting using the columns added thus far
         sorted_products = products_sorting.sort_values(['Marketing', 'New Arrival', 'Gabine', 'Koa', 
                                                         'Best Seller Seasonal', 'Best Seller Weekly', 
                                                         'Charlot', 'Perline', 'Petra', 'Toni', 
-                                                        'Repeat', 'Key Size Check', 
+                                                        'Repeat', 'Core Group', 'Family Mapping', 'Key Size Check', 
                                                         'Colour', 'Weeks Launched','Stock Type','SOH By Theme', 'SOH'], 
                                                         ascending=[False, False, False, False,
                                                                 False, False, 
                                                                 False, False, False, False,
-                                                                False, False,
+                                                                False, False, False, False,
                                                                 False, True, False, False, False])
         
-        sorted_products = sorted_products.reindex(columns=['Article', 'Marketing', 'New Arrival', 'Gabine', 'Koa', 
-                                                            'Best Seller Seasonal', 'Best Seller Weekly', 
-                                                            'Charlot', 'Perline', 'Petra', 'Toni',  
-                                                            'Repeat', 
-                                                            'Core Group', 'Family Mapping', 'Key Size Check',
-                                                            'Colour','Weeks Launched', 'Stock Type', 'Seasonal Focus',
-                                                            'SOH', 'Class', 'Sub Class', 'Theme', 'Season', 'Category',
-                                                            'Category Name', 'Size', 'First Sales Date', 'SOH By Theme'])
+        # sorted_products = sorted_products.reindex(columns=['Article', 'Marketing', 'New Arrival', 'Gabine', 'Koa', 
+        #                                                     'Best Seller Seasonal', 'Best Seller Weekly', 
+        #                                                     'Charlot', 'Perline', 'Petra', 'Toni',  
+        #                                                     'Repeat', 
+        #                                                     'Core Group', 'Family Mapping', 'Key Size Check',
+        #                                                     'Colour','Weeks Launched', 'Stock Type', 'Seasonal Focus',
+        #                                                     'SOH', 'Class', 'Sub Class', 'Theme', 'Season', 'Category',
+        #                                                     'Category Name', 'Size', 'First Sales Date', 'SOH By Theme'])
         
         output = sorted_products.copy()
 
@@ -431,10 +424,10 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
     def product_grouping(sorted_items):
 
         # Sort by columns
-        sort_columns = ['Marketing', 'New Arrival', 'Repeat', 
+        sort_columns = ['Marketing', 'New Arrival', 'Repeat', 'Family Mapping',
                         'Key Size Check', 'Colour', 'Weeks Launched', 'Stock Type', 
                         'SOH By Theme', 'SOH']
-        sort_order = [False, False, False, 
+        sort_order = [False, False, False, True,
                         False, False, True, False, 
                         False, False]
         sorted_items_core = sorted_items.sort_values(sort_columns, ascending=sort_order).copy()
