@@ -143,8 +143,17 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
     processing_df['Marketing'] = processing_df['Article'].isin(marketing_items['Article'])
 
     # Reading Family Mapping file for each product category
-    FamilyGrouping_ref = params_dict["DAT13 Core List Tracker (3)"].iloc[:, 1:3]
-    FamilyGrouping_ref.rename(columns = {'Initial Article': 'Family Mapping', 'New Article': 'Article'}, inplace=True)
+    # FamilyGrouping_ref = params_dict["DAT13 Core List Tracker (3)"].iloc[:, 1:3]
+    # FamilyGrouping_ref.rename(columns = {'Initial Article': 'Family Mapping', 'New Article': 'Article'}, inplace=True)
+
+    # Get Family Mapping data table
+    conn = psycopg2.connect(**params)
+    query = f'''
+    SELECT initial_art as "Family Mapping", new_art as "Article"
+    FROM ads.ads_anapalan_article_mapping_di
+    '''
+    FamilyGrouping_ref = pd.read_sql(query, conn)
+    conn.close()
 
     articles_to_add = list(set(soh_df[~soh_df['Article'].isin(FamilyGrouping_ref['Article'].to_list())]['Article']))
     list_base_articles = list(['-'.join((article.split('_')[0]).split('-')[:2]) for article in articles_to_add])
