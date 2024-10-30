@@ -137,7 +137,7 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
                     
     # Reading Marketing Push info from worksheet
     marketing_df = params_dict["Marketing Push"].iloc[:, 0:5]
-    marketing_items = marketing_df[(marketing_df['Year']== year) & (marketing_df['Week']== week)]
+    marketing_items = marketing_df
 
     # Appending marketing list onto the Rough Working List
     processing_df['Marketing'] = processing_df['Article'].isin(marketing_items['Article'])
@@ -337,15 +337,15 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
     # Function for initial sorting of products by category
     def product_sorting(product_category):
         if product_category == 'Bags':
-            article_prefix = "CK2|CK6|SL2|SL6|CK11"
+            article_prefix = "CK2-|CK6-|SL2-|SL6-|CK11-"
         elif product_category == 'Shoes':
-            article_prefix = "CK1|CK9|SL1"
+            article_prefix = "CK1-|CK9-|SL1-"
         elif product_category == 'Sunglasses':
-            article_prefix = "CK3"
+            article_prefix = "CK3-"
         elif product_category == 'Jewellery':
-            article_prefix = "CK5"
+            article_prefix = "CK5-"
         elif product_category == 'Accessories':
-            article_prefix = "SL12|CK8"
+            article_prefix = "SL12-|CK8-|CK19-"
 
         # Filtering for products by category
         selected_category = processing_df[processing_df['Article'].str.contains(article_prefix)]
