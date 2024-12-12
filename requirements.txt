@@ -1,0 +1,11 @@
+dash
+dash_bootstrap_components
+Flask
+numpy
+office365
+Office365-REST-Python-Client
+openpyxl
+pandas
+psycopg2_binary
+XlsxWriter
+xlrd

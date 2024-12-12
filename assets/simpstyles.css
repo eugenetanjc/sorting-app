@@ -1,0 +1,21 @@
+@import url('https://stackpath.bootstrapcdn.com/bootswatch/4.3.1/cosmo/bootstrap.min.css');
+
+.sidebar-link:hover {
+    background-color: #ffffff !important;
+    color: #333333 !important;
+    border: 1px solid #B4D0FF !important;
+}
+
+.submit-button {
+    background-color: #2780e3;
+    color: #ffffff;
+    padding: 10px 20px;
+    border-radius: 5px;
+    border: none;
+}
+
+.submit-button:hover {
+    background-color: #DADADA;
+    color: #333333;
+    cursor: pointer;
+}
