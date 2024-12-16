@@ -998,16 +998,26 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
         additional_params['Product ID'] = additional_params['Article'] + '-' + country_PID
         additional_params['Catalog ID'] = 'storefront_ck' + '-' + country_CID
 
-        additional_df = final_sorted[final_sorted['Product ID'].isin(additional_params['Product ID'].to_list())].copy()
+        additional_df = final_sorted[final_sorted['Product ID'].isin(additional_params['Product ID'].to_list())][['Product ID', 'Catalog ID']].drop_duplicates()
 
         if len(additional_df) > 0: 
-            additional_df['Category ID'] = additional_params['SID'].iloc[0]
+            
+            # Additional sheet for each new Category ID
+            additional_category_df = additional_df.copy()
+            additional_category_df = pd.merge(additional_category_df[['Product ID', 'Catalog ID']].drop_duplicates(), 
+                                            additional_params[['Product ID', 'SID']], 
+                                            on='Product ID', 
+                                            how='left')
+            additional_category_df.columns = ['Product ID', 'Catalog ID', 'Category ID']
+            additional_category_df['Values'] = 'bottom'
+
+            # Additional sheet with Category ID being the sheet name from params 
+            additional_df['Category ID'] = additional_sheet
             additional_df['Values'] = 'bottom'
 
             final_sorted = pd.concat([final_sorted, 
                                     additional_df.drop_duplicates()[['Product ID', 'Category ID', 'Catalog ID', 'Values']]],
                                     axis=0)
-
 
     # Lookup Product ID using country
     split_string = "-" + ref_dfs['PID_ref'].loc[ref_dfs['PID_ref']["Country"] == country, "PID"].values[0]
