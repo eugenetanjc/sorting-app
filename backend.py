@@ -995,12 +995,12 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
     for additional_sheet in additional_params_dict.keys():
         additional_params = additional_params_dict[additional_sheet]
 
-        additional_params['Product ID'] = additional_params['Article'] + '-' + 'TH'
-        additional_params['Catalog ID'] = 'storefront_ck' + '-' + 'th'
+        additional_params['Product ID'] = additional_params['Article'] + '-' + country_PID
+        additional_params['Catalog ID'] = 'storefront_ck' + '-' + country_CID
 
         additional_df = final_sorted[final_sorted['Product ID'].isin(additional_params['Product ID'].to_list())].copy()
 
-        if len(additional_df) > 0:
+        if len(additional_df) > 0: 
             additional_df['Category ID'] = additional_params['SID'].iloc[0]
             additional_df['Values'] = 'bottom'
 
