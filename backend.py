@@ -678,7 +678,7 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
         print("-------------------------------------------------------------------------------")
 
         # Combine all dataframes into one dataframe
-        all_tagged = pd.concat([mcid_one, scid_one, scid_two, naid_one], ignore_index=True)
+        all_tagged = pd.concat([mcid_one, scid_one, scid_two], ignore_index=True)
 
         if product_category_string == 'Shoes':
             ck17_article_df = all_tagged[all_tagged['Product ID'].str.startswith('CK17')]  # Remove CK17
@@ -954,8 +954,13 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
                                                                 
     new_arrivals_combined_sorted = new_arrivals_combined_sorted.drop(columns=['Week', 'Cat Rank', 'Individual Cat Rank', 'MOD Rank', 
                                                                                 'Sequence', 'Family Mapping', 'Map Order'])
-    new_arrivals_combined_sorted['Category ID'] = 'newarrivals'
-    new_arrivals_combined_sorted.reset_index(drop=True, inplace=True)
+    
+    # New arrivals overall is the combined list of all new arrivals regardless of category
+    new_arrivals_overall = new_arrivals_combined_sorted.copy()
+    new_arrivals_overall['Category ID'] = 'newarrivals'
+
+    # Combine with individually sorted categories
+    new_arrivals_combined_sorted = pd.concat([new_arrivals_overall, new_arrivals_combined_sorted], axis=0)
 
     # All sorted dataframes
     all_categories_sorted = pd.concat([gs_sorted_df, shoes_sorted_df, bags_sorted_df, 
