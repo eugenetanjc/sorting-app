@@ -847,12 +847,19 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
                                                     axis=0, ignore_index=True))
     new_arrivals_combined = new_arrivals_combined.sort_values(['Category ID'], ascending=[True])
 
+    country_PID  = ref_dfs['PID_ref'].loc[ref_dfs['PID_ref']["Country"] == country, "PID"].values[0]
+    country_CID = ref_dfs['CID_ref'].loc[ref_dfs['CID_ref']["Country"] == country, "CID"].values[0]
+
+    new_arrivals['Product ID'] = new_arrivals['Article'] + '-' + country_PID
+    new_arrivals_combined = pd.merge(new_arrivals_combined, new_arrivals[['Product ID', 'Week']], on='Product ID', how='left')
+
     # Add Family Mapping column to combined New Arrivals 
-    all_sorted_categories = pd.concat([sorted_bags_by_groups, 
-                                    sorted_shoes_by_groups, 
-                                    sorted_sg, 
-                                    sorted_j, 
-                                    sorted_acc])
+    all_sorted_categories = pd.concat([
+                                        sorted_bags_by_groups, 
+                                        sorted_shoes_by_groups, 
+                                        sorted_sg, 
+                                        sorted_j, 
+                                        sorted_acc])
 
     new_arrivals_combined = pd.merge(new_arrivals_combined, 
                                     all_sorted_categories[['Product ID', 'Family Mapping']], 
@@ -940,12 +947,12 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
     new_arrivals_combined['Sequence'] = seq_list    
 
     # Sort by Sequence, Individual Cat Rank, Cat Rank, Mod Rank
-    new_arrivals_combined_sorted = new_arrivals_combined.sort_values(['Sequence', 'Cat Rank', 'Individual Cat Rank', 
+    new_arrivals_combined_sorted = new_arrivals_combined.sort_values(['Week', 'Sequence', 'Cat Rank', 'Individual Cat Rank', 
                                                                         'MOD Rank', 'Values', 'Catalog ID', 'Category ID'], 
-                                                                        ascending=[True, True, True, 
+                                                                        ascending=[False, True, True, True, 
                                                                                     False, False, False, False])
                                                                 
-    new_arrivals_combined_sorted = new_arrivals_combined_sorted.drop(columns=['Cat Rank', 'Individual Cat Rank', 'MOD Rank', 
+    new_arrivals_combined_sorted = new_arrivals_combined_sorted.drop(columns=['Week', 'Cat Rank', 'Individual Cat Rank', 'MOD Rank', 
                                                                                 'Sequence', 'Family Mapping', 'Map Order'])
     new_arrivals_combined_sorted['Category ID'] = 'newarrivals'
     new_arrivals_combined_sorted.reset_index(drop=True, inplace=True)
@@ -958,9 +965,6 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
     final_sorted = pd.concat([all_categories_sorted, new_arrivals_combined_sorted], axis=0, ignore_index=True)
 
     # For L'initial sheet
-    country_PID  = ref_dfs['PID_ref'].loc[ref_dfs['PID_ref']["Country"] == country, "PID"].values[0]
-    country_CID = ref_dfs['CID_ref'].loc[ref_dfs['CID_ref']["Country"] == country, "CID"].values[0]
-
     signature_label_df = item_master_df[(item_master_df['Label Desc']=='Signature Label')][['Article', 'Label Desc']].drop_duplicates()
     signature_label_df['Product ID'] = signature_label_df['Article'] + '-' + country_PID
     signature_label_df['Catalog ID'] = 'storefront_ck' + '-' + country_CID
