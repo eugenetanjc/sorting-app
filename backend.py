@@ -961,6 +961,7 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
 
     # Combine with individually sorted categories
     new_arrivals_combined_sorted = pd.concat([new_arrivals_overall, new_arrivals_combined_sorted], axis=0)
+    new_arrivals_combined_sorted.reset_index(drop=True, inplace=True)
 
     # All sorted dataframes
     all_categories_sorted = pd.concat([gs_sorted_df, shoes_sorted_df, bags_sorted_df, 
