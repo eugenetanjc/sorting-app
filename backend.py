@@ -1037,14 +1037,14 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
     final_sorted['Photo'] = ''
 
     # Reading Marketing Push from worksheet, to retrieve products with specified Category IDs
-    custom_category_ID = marketing_items[marketing_df['Category ID'].notna()]
+    # custom_category_ID = marketing_items[marketing_df['Category ID'].notna()]
 
     # Add in reference to Marketing Push for custom IDs, if no reference, then just refer to previous indicated values
-    final_sorted = pd.merge(final_sorted, custom_category_ID, on="Article", how="left")
-    final_sorted["Final Category ID"] = final_sorted["Category ID_y"].fillna(final_sorted["Category ID_x"])
+    # final_sorted = pd.merge(final_sorted, custom_category_ID, on="Article", how="left")
+    # final_sorted["Final Category ID"] = final_sorted["Category ID_y"].fillna(final_sorted["Category ID_x"])
 
     # Drop unnecessary columns, rename Final Category ID and rearrange ID for Final DF
-    final_sorted.drop(["Year", "Week", "Category", "Category ID_x", "Category ID_y"], axis=1, inplace=True)
-    final_sorted.rename(columns={"Final Category ID": "Category ID"}, inplace=True)
+    # final_sorted.drop(["Year", "Week", "Category", "Category ID_x", "Category ID_y"], axis=1, inplace=True)
+    # final_sorted.rename(columns={"Final Category ID": "Category ID"}, inplace=True)
 
     return final_sorted
