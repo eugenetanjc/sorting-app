@@ -1021,12 +1021,15 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
             additional_category_df.columns = ['Product ID', 'Catalog ID', 'Category ID']
             additional_category_df['Values'] = 'bottom'
 
-            # Additional sheet with Category ID being the sheet name from params 
+            # Additional sheet with Category ID being the sheet name from params (consolidated)
             additional_df['Category ID'] = additional_sheet
             additional_df['Values'] = 'bottom'
 
-            final_sorted = pd.concat([final_sorted, 
-                                    additional_df.drop_duplicates()[['Product ID', 'Category ID', 'Catalog ID', 'Values']]],
+            final_sorted = pd.concat([
+                                    final_sorted, 
+                                    additional_df,
+                                    additional_category_df
+                                    ],
                                     axis=0)
 
     # Lookup Product ID using country
