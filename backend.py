@@ -1039,6 +1039,8 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
     final_sorted['Article'] = final_sorted['Product ID'].str.split(split_string).str[0]
     final_sorted['Photo'] = ''
 
+    final_sorted.reset_index(inplace=True, drop=True)
+
     # Reading Marketing Push from worksheet, to retrieve products with specified Category IDs
     # custom_category_ID = marketing_items[marketing_df['Category ID'].notna()]
 
