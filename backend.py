@@ -1020,6 +1020,7 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
                                             how='left')
             additional_category_df.columns = ['Product ID', 'Catalog ID', 'Category ID']
             additional_category_df['Values'] = 'bottom'
+            additional_category_df['Category ID'].fillna(additional_sheet)
 
             # Additional sheet with Category ID being the sheet name from params (consolidated)
             additional_df['Category ID'] = additional_sheet
