@@ -1060,6 +1060,7 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
 
         # Get dataframe from params sheet
         additional_params = additional_params_dict[additional_sheet]
+        additional_params['Product ID'] = additional_params['Article'] + '-' + country_PID
 
         # Sort by the same sorting logic as the categories
         additional_df = sort_additional_sheet(additional_params)
