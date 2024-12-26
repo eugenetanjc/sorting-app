@@ -997,42 +997,104 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
                             'ShoesCORE', 
                             'countryappend', 
                             'stageid']
-
+    
     # Load only additional sheets
     additional_params_dict = {key: params_dict[key] for key in params_dict.keys() if key not in standard_sheets_list}
 
+    # Function for initial sorting of products by category
+    def sort_additional_sheet(df):
+
+        # Filtering for products by category
+        selected_category = processing_df[processing_df['Article'].isin(df['Article'].to_list())]
+
+        # Getting minimum number of weeks launched for each family map grouping, this is to give an ordering of the families since it needs to be ascending or descending
+        GroupMinWeeks_df = selected_category.groupby(['Family Mapping'],as_index=False).agg({'Weeks Launched': 'min'})
+        GroupMinWeeks_df.rename(columns={'Weeks Launched':'Group Minimum Number of Weeks Launched'},inplace=True)
+        products_sorting = selected_category.merge(GroupMinWeeks_df, on = "Family Mapping", how='left')
+
+
+        # Summing SOH by Theme for sorting purposes later
+        SOHbyTheme_df = selected_category.groupby(['Theme'],as_index=False).agg({'SOH': 'sum'})
+        SOHbyTheme_df.rename(columns={'SOH':'SOH By Theme'},inplace=True)
+        SOHbyTheme_df.dropna(subset=['Theme'], inplace=True)
+        products_sorting = products_sorting.merge(SOHbyTheme_df, on = "Theme", how='left')
+
+        # Initial sorting using the columns added thus far, refer to sorting logic slides 
+        sorted_products = products_sorting.sort_values(
+                                                        ['Marketing', 'New Arrival', 
+                                                        'Repeat', 
+                                                        'Key Size Check', 'Colour', 
+                                                        'Weeks Launched', 'Stock Type', 
+                                                        'SOH By Theme', 'Seasonal Focus', 'SOH',
+                                                        'Launch Date', 'Season Theme',
+                                                        'Season Product Name', 'Group Minimum Number of Weeks Launched'], 
+
+                                                        ascending=[False, False, 
+                                                                    False,  
+                                                                    False, False, 
+                                                                    True, False, 
+                                                                    False, True, False,
+                                                                    False, False, 
+                                                                    False, True
+                                                                    ])
+        
+        output = sorted_products.copy()
+
+        # Put low priority items at the bottom
+        is_no_priority = (
+            (output['Marketing'] == False) & 
+            (output['New Arrival'] == False) & 
+            (output['Repeat'] == False)
+        )
+
+        output = pd.concat([
+            output[~is_no_priority],  # Priority items
+            output[is_no_priority]   # No-priority items
+        ]).reset_index(drop=True)
+
+        return output
+
+
     # For any additional sheets
     for additional_sheet in additional_params_dict.keys():
+
+        # Get dataframe from params sheet
         additional_params = additional_params_dict[additional_sheet]
 
-        additional_params['Product ID'] = additional_params['Article'] + '-' + country_PID
-        additional_params['Catalog ID'] = 'storefront_ck' + '-' + country_CID
+        # Sort by the same sorting logic as the categories
+        additional_df = sort_additional_sheet(additional_params)
 
-        additional_df = final_sorted[final_sorted['Product ID'].isin(additional_params['Product ID'].to_list())][['Product ID', 'Catalog ID']].drop_duplicates()
-
+        # Preprocess data
+        additional_df['Product ID'] = additional_df['Article'] + '-' + country_PID
+        additional_df['Catalog ID'] = 'storefront_ck' + '-' + country_CID
+        additional_df = additional_df[['Product ID', 'Catalog ID']]
+        
+        # If there are additional sheets to add
         if len(additional_df) > 0: 
             
-            # Additional sheet for each new Category ID
-            additional_category_df = additional_df.copy()
-            additional_category_df = pd.merge(additional_category_df[['Product ID', 'Catalog ID']].drop_duplicates(), 
-                                            additional_params[['Product ID', 'SID']], 
-                                            on='Product ID', 
-                                            how='left')
-            additional_category_df.columns = ['Product ID', 'Catalog ID', 'Category ID']
-            additional_category_df['Values'] = 'bottom'
-            additional_category_df['Category ID'] = additional_category_df['Category ID'].fillna(additional_sheet)
+            # Match the articles with the user-specified SIDs
+            user_specified_SIDs = additional_df.copy()
+            user_specified_SIDs = pd.merge(user_specified_SIDs.drop_duplicates(), 
+                                        additional_params[['Product ID', 'SID']], 
+                                        on='Product ID', 
+                                        how='left')
 
-            # Additional sheet with Category ID being the sheet name from params (consolidated)
+            user_specified_SIDs.columns = ['Product ID', 'Catalog ID', 'Category ID']
+            user_specified_SIDs['Values'] = 'bottom'
+
+            # Only keep the rows that have SID specified
+            user_specified_SIDs = user_specified_SIDs[~pd.isna(user_specified_SIDs['Category ID'])]
+
+            # Consolidated additional sheet with Category ID being the sheet name from params 
             additional_df['Category ID'] = additional_sheet
             additional_df['Values'] = 'bottom'
 
-            final_sorted = pd.concat([
-                                    final_sorted, 
+            final_sorted = pd.concat([final_sorted, 
                                     additional_df,
-                                    additional_category_df
+                                    user_specified_SIDs
                                     ],
                                     axis=0)
-
+            
     # Lookup Product ID using country
     split_string = "-" + ref_dfs['PID_ref'].loc[ref_dfs['PID_ref']["Country"] == country, "PID"].values[0]
 
