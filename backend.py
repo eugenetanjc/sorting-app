@@ -35,18 +35,18 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
     # Selecting the parameters for key size info, and reading calendar info from Seasonal Calendar worksheet
     if countrytype == 'Hot':
         key_size_cols = slice(4,6)
-        calendar_df = params_dict["Seasonal Calendar"].iloc[3:55, 0:9]
+        calendar_df = params_dict["Seasonal Calendar"].iloc[2:55, 0:9]
         calendar_df.columns = ["Month","week","Open Toe","Platform Open Toe","Covered Open-Back",
                             "Platform Covered Open-Back","Covered","Platform Covered","Boots"]
         
     elif countrytype == 'Cold':
         key_size_cols = slice(7, 9)  
-        calendar_df = params_dict["Seasonal Calendar"].iloc[3:55, 10:19]
+        calendar_df = params_dict["Seasonal Calendar"].iloc[2:55, 10:19]
         calendar_df.columns = ["Month","week","Boots","Covered","Platform Covered","Covered Open-Back", 
                                "Platform Covered Open-Back","Open Toe","Platform Open Toe"]
     else:
         key_size_cols = slice(10, 12)  
-        calendar_df = params_dict["Seasonal Calendar"].iloc[3:55, 24:33]
+        calendar_df = params_dict["Seasonal Calendar"].iloc[2:55, 24:33]
         calendar_df.columns = ["Month","week","Boots","Covered","Platform Covered","Covered Open-Back",
                                 "Platform Covered Open-Back","Open Toe","Platform Open Toe"]
 
