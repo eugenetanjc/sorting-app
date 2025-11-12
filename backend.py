@@ -886,7 +886,8 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
             # If 'Family Mapping' is null, use the current index as the value for 'Map Order'
             new_arrivals_combined.loc[num, 'Map Order'] = num
  
-    new_arrivals_combined.sort_values('Map Order', inplace=True)
+    if 'Map Order' in new_arrivals_combined.columns:
+        new_arrivals_combined.sort_values('Map Order', inplace=True)
 
     # Add Cat Rank column using Category ID, rank is based on the number of unique categories
     cat_ranks = {category: rank + 1 for rank, category in enumerate(new_arrivals_combined['Category ID'].unique())}
