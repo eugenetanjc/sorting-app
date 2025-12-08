@@ -28,7 +28,7 @@ year_options = [{'label': str(i), 'value': str(i)} for i in range(year-1, year+2
 
 # Country options
 country_options = [{'label': country, 'value': country} for country in [
-    'INDIA', 'INDONESIA', 'JAPAN', 'SAUDI ARABIA', 'SINGAPORE', 'SOUTH KOREA', 'THAILAND', 'VIETNAM'
+    'INDIA', 'INDONESIA', 'JAPAN', 'SAUDI ARABIA', 'SINGAPORE', 'SOUTH KOREA', 'THAILAND', 'VIETNAM', 'UNITED ARAB EMIRATES'
     ]]
 countrytype_options = [{'label': countrytype, 'value': countrytype} for countrytype  in ['Hot', 'Cold', 'ANZ']]
 
