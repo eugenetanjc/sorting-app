@@ -368,22 +368,22 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
     repeats.columns = ['Week', 'Article']
     processing_df['Repeat'] = processing_df['Article'].isin(repeats['Article'])
 
-    # Get global sales data for seasonal items
-    seasonal_article_tuple = tuple(processing_df[processing_df['Stock Type']=='3 SEASONAL']['Article'])
+    seasonal_articles = processing_df.loc[
+        processing_df['Stock Type'] == '3 SEASONAL', 'Article'
+    ].tolist()
+
     conn = psycopg2.connect(**params)
-    query = f'''
-            SELECT 
-                articleno as article, 
-                SUM(soldqty) as total_sold_qty_seasonal
-            FROM 
-                ads.ads_ckg_ecom_salesfact 
-            WHERE 
-                articleno IN {seasonal_article_tuple}
-            GROUP BY articleno
-            ORDER BY total_sold_qty_seasonal 
-            DESC
-            '''
-    seasonal_sales = pd.read_sql(query, conn).dropna().copy()
+
+    query = """
+        SELECT articleno AS article,
+            SUM(soldqty) AS total_sold_qty_seasonal
+        FROM ads.ads_ckg_ecom_salesfact
+        WHERE articleno = ANY(%s)
+        GROUP BY articleno
+        ORDER BY total_sold_qty_seasonal DESC
+    """
+
+    seasonal_sales = pd.read_sql(query, conn, params=(seasonal_articles,))
     conn.close()
     seasonal_sales.columns = seasonal_sales.columns.str.capitalize()
 
