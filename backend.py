@@ -174,6 +174,7 @@ def sorting(s_country, year, s_week, s_ctype, params_dict):
     processing_df = processing_df.merge(item_master_df, on = "Article")
 
     # The shoes are either boots (determined by 'Class'), or in one of the types in shoe_types (determined by 'SubClass')
+    calendar_df = calendar_df.set_index('week')
     shoe_types = list(calendar_df.columns[2:])  
     processing_df['Seasonal Focus'] = processing_df.apply(lambda row: calendar_df[row['Class']][week] if row['Class'] == 'Boots'
                                                             else (calendar_df[row['Sub Class']][week] if row['Sub Class'] in shoe_types else ''),
